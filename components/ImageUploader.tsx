@@ -7,22 +7,28 @@ import { motion } from 'framer-motion';
 import PolaroidCard from './PolaroidCard';
 
 const GHOST_POLAROIDS_CONFIG = [
-  { initial: { x: "-150%", y: "-100%", rotate: -30 }, transition: { delay: 0.2 } },
-  { initial: { x: "150%", y: "-80%", rotate: 25 }, transition: { delay: 0.4 } },
-  { initial: { x: "-120%", y: "120%", rotate: 45 }, transition: { delay: 0.6 } },
-  { initial: { x: "180%", y: "90%", rotate: -20 }, transition: { delay: 0.8 } },
-  { initial: { x: "0%", y: "-200%", rotate: 0 }, transition: { delay: 0.5 } },
-  { initial: { x: "100%", y: "150%", rotate: 10 }, transition: { delay: 0.3 } },
+    { initial: { x: "-150%", y: "-100%", rotate: -30 }, transition: { delay: 0.2 } },
+    { initial: { x: "150%", y: "-80%", rotate: 25 }, transition: { delay: 0.4 } },
+    { initial: { x: "-120%", y: "120%", rotate: 45 }, transition: { delay: 0.6 } },
+    { initial: { x: "180%", y: "90%", rotate: -20 }, transition: { delay: 0.8 } },
+    { initial: { x: "0%", y: "-200%", rotate: 0 }, transition: { delay: 0.5 } },
+    { initial: { x: "100%", y: "150%", rotate: 10 }, transition: { delay: 0.3 } },
 ];
 
 interface ImageUploaderProps {
     onImageSelect: (file: File) => void;
+    onBatchSelect?: (files: File[]) => void;
+    isBatchMode?: boolean;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, onBatchSelect, isBatchMode = false }) => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            onImageSelect(e.target.files[0]);
+        if (e.target.files) {
+            if (isBatchMode && onBatchSelect) {
+                onBatchSelect(Array.from(e.target.files));
+            } else if (e.target.files[0]) {
+                onImageSelect(e.target.files[0]);
+            }
         }
     };
 
@@ -53,17 +59,18 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) => {
                 className="flex flex-col items-center"
             >
                 <label htmlFor="file-upload" className="cursor-pointer group transform hover:scale-105 transition-transform duration-300">
-                    <PolaroidCard 
+                    <PolaroidCard
                         caption="Click to begin"
                         status="done"
                     />
                 </label>
-                <input 
-                    id="file-upload" 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/png, image/jpeg, image/webp" 
-                    onChange={handleFileChange} 
+                <input
+                    id="file-upload"
+                    type="file"
+                    className="hidden"
+                    accept="image/png, image/jpeg, image/webp"
+                    onChange={handleFileChange}
+                    multiple={isBatchMode}
                 />
                 <p className="mt-8 font-permanent-marker text-neutral-500 text-center max-w-xs text-lg">
                     Click the polaroid to upload your photo and start your journey through time.

@@ -4,6 +4,8 @@
 - **Stack**: Vite + React 19 + TypeScript. All logic runs client-side; no server layer. `index.html` injects Tailwind via CDN and declares import maps for browser ESM resolution.
 - **Build & Run**: `npm install` then `npm run dev` (serves on `0.0.0.0:3000`). `npm run build` creates the production bundle. No automated tests are defined.
 - **Env Config**: Place `OPENROUTER_API_KEY=<key>` in `.env.local`. `vite.config.ts` maps this to `process.env.OPENROUTER_API_KEY`. Get your API key at https://openrouter.ai/keys.
+- **API Service**: Uses OpenRouter as API gateway to access Google Gemini 2.5 Flash Image model. No SDK dependency - uses native `fetch` API.
+- **Dependencies**: React 19, Framer Motion, Tailwind (CDN). Removed `@google/genai` SDK in favor of REST API.
 
 ## Component Architecture (Refactored)
 - **App.tsx** (196 lines): Main orchestrator wrapped in `ToastProvider`. Manages state machine (`idle → image-uploaded → generating → results-shown`) and coordinates child components.
@@ -13,7 +15,8 @@
 - **Toast** (`components/Toast.tsx`): Context-based notification system. Use `useToast()` hook to call `showToast(message, type, duration)` for user feedback.
 
 ## Custom Hooks
-- **useImageGeneration** (`hooks/useImageGeneration.ts`): Manages all generation logic with concurrency control (default: 2 workers). Returns `{ generatedImages, isLoading, generateAll, regenerateDecade, reset }`. Handles Blob URL cleanup automatically.
+- **useImageGeneration** (`hooks/useImageGeneration.ts`, 147 lines): Manages all generation logic with concurrency control (default: 6 workers for parallel processing). Returns `{ generatedImages, isLoading, generateAll, regenerateDecade, reset }`. Handles Blob URL cleanup automatically.
+  - **DECADE_PROMPTS**: Dictionary of era-specific prompts (lines 12-24) with tailored descriptions for each decade including photography style, fashion details, and identity preservation instructions.
 - **useMediaQuery** (`hooks/useMediaQuery.ts`): Responsive design hook. Example: `const isMobile = useMediaQuery('(max-width: 768px)')`.
 
 ## Key Flows
@@ -23,7 +26,12 @@
 - Uploads are read with `FileReader` and stored as data URLs in `App.tsx` state.
 
 ### Generation Pipeline
-- **Concurrency**: `useImageGeneration` processes decades with a cap of 2 workers to stay within rate limits.
+- **Concurrency**: `useImageGeneration` processes all 6 decades simultaneously with 6 workers (changed from 2 for faster generation).
+- **Decade-Specific Prompts**: Each decade uses a tailored prompt from `DECADE_PROMPTS` that includes:
+  - Photography style (film quality, color grading, camera technology)
+  - Fashion details (era-specific clothing, hairstyles, accessories)
+  - Technical specs (lighting, grain, focus, composition)
+  - Identity preservation (explicit instructions to maintain facial features)
 - **Memory Optimization**: Generated images use **Blob URLs** (not base64 data URLs) for ~70% memory reduction. Cleanup happens automatically via `URL.revokeObjectURL()`.
 - **Status Tracking**: Each decade has `pending/done/error` status reflected in UI.
 - **User Feedback**: Toast notifications show success/error for each generation.
@@ -40,15 +48,50 @@
   - Handles both Blob URLs and data URLs via `blobUrlToDataUrl()` helper.
 - **Validation**: `handleDownloadAlbum` enforces all decades must be `done` before composing.
 
+## Decade-Specific Prompts (NEW)
+
+Each decade has a tailored prompt in `DECADE_PROMPTS` dictionary (`hooks/useImageGeneration.ts`, lines 12-24):
+
+### Prompt Structure
+Each prompt includes:
+1. **Photography Style**: Film quality, color grading, camera technology of the era
+2. **Fashion Details**: Era-specific clothing, hairstyles, accessories for both genders
+3. **Technical Specs**: Lighting, grain, focus, composition typical of the decade
+4. **Identity Preservation**: Explicit instructions to maintain facial features exactly
+
+### Example (1950s)
+```
+Transform this person into a 1950s portrait photograph. Style: Post-war American
+aesthetic with high-contrast black and white or early Kodachrome color. Fashion:
+Men in fedoras, suits with wide lapels, slicked hair; Women in circle skirts,
+victory rolls, cat-eye glasses. Photography: Grainy film texture, studio lighting,
+formal pose. Maintain the person's facial features and identity exactly.
+```
+
+### Why Decade-Specific?
+- **Better Results**: AI generates more authentic era-appropriate images
+- **Consistency**: Each decade has distinct visual characteristics
+- **Identity Preservation**: Explicit instructions prevent face morphing
+- **Fallback**: Generic prompt still available if decade not in dictionary
+
+### Modifying Prompts
+To change prompts, edit `DECADE_PROMPTS` in `hooks/useImageGeneration.ts`. Both `generateAll()` and `regenerateDecade()` use this dictionary with fallback to generic prompt.
+
 ## Services & Utilities
 
 ### OpenRouter Service (geminiService.ts)
-- **Location**: `services/geminiService.ts`
+- **Location**: `services/geminiService.ts` (271 lines)
 - **API**: Uses OpenRouter API (https://openrouter.ai/api/v1/chat/completions) with model `google/gemini-2.5-flash-image`.
-- **Behavior**: Sends image + text prompt via REST API. Retries internal errors with exponential backoff, falls back to secondary prompt if model returns text instead of image.
-- **Memory**: Returns **Blob URLs** (not base64) via `processOpenRouterResponse()`.
-- **Helpers**: Reuse `extractDecade` and `getFallbackPrompt` when extending prompts.
+- **Migration**: Switched from Google Gemini SDK (`@google/genai`) to OpenRouter REST API using native `fetch`.
+- **Key Functions**:
+  - `callOpenRouterWithRetry()`: Makes API calls with exponential backoff retry logic (3 attempts, handles 500/429 errors).
+  - `processOpenRouterResponse()`: Extracts image from OpenRouter's response format. Checks `message.images` array first (OpenRouter's format for Gemini), then falls back to `message.content`. Converts base64 data URLs to Blob URLs for memory efficiency.
+  - `generateDecadeImage()`: Main entry point. Attempts generation with primary prompt, falls back to `getFallbackPrompt()` if blocked.
+  - `extractDecade()`: Regex helper to extract decade from prompt string.
+  - `getFallbackPrompt()`: Creates alternative prompt when primary is blocked.
 - **Authentication**: Uses Bearer token in Authorization header with `OPENROUTER_API_KEY`.
+- **Response Format**: OpenRouter returns images in `message.images[0].image_url.url` (not in `message.content` like standard OpenAI format).
+- **Memory**: Returns **Blob URLs** (not base64) via `processOpenRouterResponse()` for ~70% memory reduction.
 
 ### Album Utils
 - **Location**: `lib/albumUtils.ts`
@@ -96,17 +139,21 @@
 - **Auto-dismiss**: Default 5s, configurable per call.
 
 ## Debug Tips
-- **Gemini Errors**: Watch browser console for detailed error messages from `generateDecadeImage`.
+- **OpenRouter Errors**: Watch browser console for detailed error messages from `generateDecadeImage`. Response format is logged in `processOpenRouterResponse()`.
+- **API Issues**: Check OpenRouter dashboard at https://openrouter.ai/activity for usage, credits, and rate limit info.
 - **Canvas Export**: Verify all `imageData` keys map to loaded images before calling `createAlbumPage`.
 - **Memory**: Use Chrome DevTools → Memory tab to verify Blob URL cleanup.
 - **Toast Issues**: Check that component is wrapped in `<ToastProvider>`.
+- **Prompt Testing**: Modify `DECADE_PROMPTS` in `hooks/useImageGeneration.ts` to test different prompt variations.
 
 ## Extending the App
 
 ### Adding New Decades
 1. Update `DECADES` constant in `App.tsx`
-2. Update `POSITIONS` array in `GenerationGrid.tsx` for desktop scattering
-3. Update canvas layout in `lib/albumUtils.ts` if needed
+2. Add new decade-specific prompt to `DECADE_PROMPTS` in `hooks/useImageGeneration.ts`
+3. Update `POSITIONS` array in `GenerationGrid.tsx` for desktop scattering
+4. Update canvas layout in `lib/albumUtils.ts` if needed
+5. Consider adjusting `concurrencyLimit` if adding many decades
 
 ### Adding New Features
 - **New UI State**: Add to `appState` type in `App.tsx`
