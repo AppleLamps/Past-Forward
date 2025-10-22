@@ -10,7 +10,6 @@ import ImagePreview from './components/ImagePreview';
 import GenerationGrid from './components/GenerationGrid';
 import Footer from './components/Footer';
 import Gallery from './components/Gallery';
-import BatchUploadProgress, { BatchItem } from './components/BatchUploadProgress';
 import { createAlbumPage } from './lib/albumUtils';
 import { validateImage } from './lib/imageValidation';
 import { useImageGeneration, DECADE_PROMPTS } from './hooks/useImageGeneration';
@@ -32,9 +31,8 @@ function AppContent() {
     const [appState, setAppState] = useState<'idle' | 'image-uploaded' | 'generating' | 'results-shown'>('idle');
     const [showGallery, setShowGallery] = useState(false);
     const [isBatchMode, setIsBatchMode] = useState(false);
-    const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
-    const [batchProgress, setBatchProgress] = useState(0);
-    const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+    const [batchQueue, setBatchQueue] = useState<File[]>([]);
+    const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
     const isMobile = useMediaQuery('(max-width: 768px)');
     const { showToast } = useToast();
 
@@ -211,113 +209,91 @@ function AppContent() {
     const handleBatchUpload = async (files: File[]) => {
         if (files.length === 0) return;
 
-        setIsBatchMode(true);
-        setIsProcessingBatch(true);
-        setAppState('generating');
+        setBatchQueue(files);
+        setCurrentBatchIndex(0);
 
-        // Initialize batch items
-        const items: BatchItem[] = files.map((file, index) => ({
-            id: `batch-${Date.now()}-${index}`,
-            fileName: file.name,
-            status: 'pending',
-            progress: 0,
-        }));
-        setBatchItems(items);
+        // Process the first file
+        await processBatchFile(files[0], 0, files.length);
+    };
 
-        let completedCount = 0;
+    const processBatchFile = async (file: File, index: number, total: number) => {
+        try {
+            // Validate image
+            const validation = await validateImage(file, {
+                maxSizeMB: 5,
+                maxWidth: 4096,
+                maxHeight: 4096,
+            });
 
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const itemId = items[i].id;
-
-            try {
-                // Update status to processing
-                setBatchItems(prev =>
-                    prev.map(item =>
-                        item.id === itemId ? { ...item, status: 'processing', progress: 10 } : item
-                    )
-                );
-
-                // Validate image
-                const validation = await validateImage(file, {
-                    maxSizeMB: 5,
-                    maxWidth: 4096,
-                    maxHeight: 4096,
-                });
-
-                if (!validation.valid) {
-                    throw new Error(validation.error || 'Invalid image');
-                }
-
-                if (!validation.dataUrl) {
-                    throw new Error('Failed to process image');
-                }
-
-                // Update progress
-                setBatchItems(prev =>
-                    prev.map(item =>
-                        item.id === itemId ? { ...item, progress: 30 } : item
-                    )
-                );
-
-                // Generate all decades
-                const imageData: Record<string, string> = {};
-                const decadePromises = DECADES.map(async (decade) => {
-                    try {
-                        const result = await generateDecadeImage(validation.dataUrl!, DECADE_PROMPTS[decade] || `Reimagine the person in this photo in the style of the ${decade}.`);
-                        imageData[decade] = result;
-                    } catch (error) {
-                        console.error(`Failed to generate ${decade}:`, error);
-                    }
-                });
-
-                await Promise.all(decadePromises);
-
-                // Update progress
-                setBatchItems(prev =>
-                    prev.map(item =>
-                        item.id === itemId ? { ...item, progress: 80 } : item
-                    )
-                );
-
-                // Save to history
-                const record: GenerationRecord = {
-                    id: `gen-${Date.now()}-${i}`,
-                    timestamp: Date.now(),
-                    originalImageUrl: validation.dataUrl,
-                    generatedImages: imageData,
-                    metadata: {
-                        fileName: file.name,
-                    },
-                };
-
-                await saveGeneration(record);
-
-                // Mark as done
-                setBatchItems(prev =>
-                    prev.map(item =>
-                        item.id === itemId ? { ...item, status: 'done', progress: 100 } : item
-                    )
-                );
-
-                completedCount++;
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                setBatchItems(prev =>
-                    prev.map(item =>
-                        item.id === itemId
-                            ? { ...item, status: 'error', progress: 0, error: errorMessage }
-                            : item
-                    )
-                );
+            if (!validation.valid) {
+                showToast(validation.error || 'Invalid image', 'error');
+                // Move to next file
+                await processNextBatchFile(index, total);
+                return;
             }
 
-            // Update overall progress
-            setBatchProgress(Math.round(((i + 1) / files.length) * 100));
-        }
+            if (!validation.dataUrl) {
+                showToast('Failed to process image', 'error');
+                await processNextBatchFile(index, total);
+                return;
+            }
 
-        setIsProcessingBatch(false);
-        showToast(`Batch processing complete! ${completedCount}/${files.length} images processed.`, 'success');
+            // Set the image and start generation (same as single mode)
+            setUploadedImage(validation.dataUrl);
+            setAppState('generating');
+
+            // Generate all decades using the same hook as single mode
+            await generateAll(validation.dataUrl);
+
+            // Auto-save to history
+            const imageData = Object.entries(generatedImages)
+                .filter(([, image]) => image.status === 'done' && image.url)
+                .reduce((acc, [decade, image]) => {
+                    acc[decade] = image!.url!;
+                    return acc;
+                }, {} as Record<string, string>);
+
+            const record: GenerationRecord = {
+                id: `gen-${Date.now()}-${index}`,
+                timestamp: Date.now(),
+                originalImageUrl: validation.dataUrl,
+                generatedImages: imageData,
+                metadata: {
+                    fileName: file.name,
+                },
+            };
+
+            await saveGeneration(record);
+
+            showToast(`Completed ${index + 1}/${total}: ${file.name}`, 'success', 2000);
+            setAppState('results-shown');
+
+            // Move to next file after a brief delay
+            await processNextBatchFile(index, total);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            showToast(`Error processing ${file.name}: ${errorMessage}`, 'error');
+            await processNextBatchFile(index, total);
+        }
+    };
+
+    const processNextBatchFile = async (currentIndex: number, total: number) => {
+        const nextIndex = currentIndex + 1;
+
+        if (nextIndex < total && nextIndex < batchQueue.length) {
+            // Wait a bit before processing next file
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setCurrentBatchIndex(nextIndex);
+            await processBatchFile(batchQueue[nextIndex], nextIndex, total);
+        } else {
+            // Batch complete
+            showToast(`Batch complete! Processed ${total} image${total > 1 ? 's' : ''}.`, 'success');
+            setBatchQueue([]);
+            setCurrentBatchIndex(0);
+            setIsBatchMode(false);
+            handleReset();
+        }
     };
 
     return (
@@ -337,10 +313,14 @@ function AppContent() {
             <div className="z-10 flex flex-col items-center justify-center w-full h-full flex-1 min-h-0">
                 <div className="text-center mb-10">
                     <h1 className="text-6xl md:text-8xl font-caveat font-bold text-neutral-100">Past Forward</h1>
-                    <p className="font-permanent-marker text-neutral-300 mt-2 text-xl tracking-wide">Generate yourself through the decades.</p>
+                    <p className="font-permanent-marker text-neutral-300 mt-2 text-xl tracking-wide">
+                        {batchQueue.length > 0
+                            ? `Batch Mode: Processing ${currentBatchIndex + 1} of ${batchQueue.length}`
+                            : 'Generate yourself through the decades.'}
+                    </p>
                 </div>
 
-                {appState === 'idle' && !isProcessingBatch && (
+                {appState === 'idle' && (
                     <>
                         <ImageUploader
                             onImageSelect={handleImageSelect}
@@ -359,14 +339,6 @@ function AppContent() {
                             </button>
                         </div>
                     </>
-                )}
-
-                {isProcessingBatch && (
-                    <BatchUploadProgress
-                        items={batchItems}
-                        totalProgress={batchProgress}
-                        isProcessing={isProcessingBatch}
-                    />
                 )}
 
                 {appState === 'image-uploaded' && uploadedImage && (
