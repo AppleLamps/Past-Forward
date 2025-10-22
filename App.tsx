@@ -386,7 +386,7 @@ function AppContent() {
                             onShake={handleRegenerateDecade}
                             onDownload={handleDownloadIndividualImage}
                         />
-                        <div className="mt-6 flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-center">
+                        <div className="mt-40 flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-center">
                             {appState === 'results-shown' && (
                                 <>
                                     <button
