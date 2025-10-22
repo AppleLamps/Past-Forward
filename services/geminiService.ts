@@ -8,7 +8,7 @@ import type { GenerateContentResponse } from "@google/genai";
 const API_KEY = process.env.API_KEY;
 
 if (!API_KEY) {
-  throw new Error("API_KEY environment variable is not set");
+    throw new Error("API_KEY environment variable is not set");
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
@@ -38,14 +38,25 @@ function extractDecade(prompt: string): string | null {
 /**
  * Processes the Gemini API response, extracting the image or throwing an error if none is found.
  * @param response The response from the generateContent call.
- * @returns A data URL string for the generated image.
+ * @returns A Blob URL string for the generated image.
  */
 function processGeminiResponse(response: GenerateContentResponse): string {
     const imagePartFromResponse = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
 
     if (imagePartFromResponse?.inlineData) {
         const { mimeType, data } = imagePartFromResponse.inlineData;
-        return `data:${mimeType};base64,${data}`;
+
+        // Convert base64 to Blob for better memory efficiency
+        const byteCharacters = atob(data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+
+        // Create and return a Blob URL
+        return URL.createObjectURL(blob);
     }
 
     const textResponse = response.text;
@@ -93,14 +104,14 @@ async function callGeminiWithRetry(imagePart: object, textPart: object): Promise
  * It includes a fallback mechanism for prompts that might be blocked in certain regions.
  * @param imageDataUrl A data URL string of the source image (e.g., 'data:image/png;base64,...').
  * @param prompt The prompt to guide the image generation.
- * @returns A promise that resolves to a base64-encoded image data URL of the generated image.
+ * @returns A promise that resolves to a Blob URL of the generated image.
  */
 export async function generateDecadeImage(imageDataUrl: string, prompt: string): Promise<string> {
-  const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
-  if (!match) {
-    throw new Error("Invalid image data URL format. Expected 'data:image/...;base64,...'");
-  }
-  const [, mimeType, base64Data] = match;
+    const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
+    if (!match) {
+        throw new Error("Invalid image data URL format. Expected 'data:image/...;base64,...'");
+    }
+    const [, mimeType, base64Data] = match;
 
     const imagePart = {
         inlineData: { mimeType, data: base64Data },

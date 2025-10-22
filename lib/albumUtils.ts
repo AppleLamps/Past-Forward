@@ -2,31 +2,56 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
+
+/**
+ * Converts a Blob URL to a data URL for canvas operations
+ */
+async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
 // Helper function to load an image and return it as an HTMLImageElement
-function loadImage(src: string): Promise<HTMLImageElement> {
+async function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        // Setting crossOrigin is good practice for canvas operations, even with data URLs
+        // Setting crossOrigin is good practice for canvas operations
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = (err) => reject(new Error(`Failed to load image: ${src.substring(0, 50)}...`));
-        img.src = src;
+
+        // If it's a blob URL, we need to handle it specially for canvas
+        if (src.startsWith('blob:')) {
+            blobUrlToDataUrl(src)
+                .then(dataUrl => { img.src = dataUrl; })
+                .catch(reject);
+        } else {
+            img.src = src;
+        }
     });
 }
 
 /**
  * Creates a single "photo album" page image from a collection of decade images.
- * @param imageData A record mapping decade strings to their image data URLs.
+ * @param imageData A record mapping decade strings to their image URLs (data URLs or Blob URLs).
+ * @param isMobile Whether to optimize for mobile devices (lower resolution).
  * @returns A promise that resolves to a data URL of the generated album page (JPEG format).
  */
-export async function createAlbumPage(imageData: Record<string, string>): Promise<string> {
+export async function createAlbumPage(imageData: Record<string, string>, isMobile: boolean = false): Promise<string> {
     const canvas = document.createElement('canvas');
-    // High-resolution canvas for good quality (A4-like ratio)
-    const canvasWidth = 2480;
-    const canvasHeight = 3508;
+    // Adjust resolution based on device - lower for mobile to prevent crashes
+    const scale = isMobile ? 0.5 : 1;
+    const canvasWidth = 2480 * scale;
+    const canvasHeight = 3508 * scale;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) {
         throw new Error('Could not get 2D canvas context');
@@ -47,16 +72,14 @@ export async function createAlbumPage(imageData: Record<string, string>): Promis
     ctx.fillStyle = '#555';
     ctx.fillText('on Google AI Studio', canvasWidth / 2, 220);
 
-    // 3. Load all the polaroid images concurrently
+    // 3. Load all the polaroid images sequentially to reduce memory pressure
     const decades = Object.keys(imageData);
-    const loadedImages = await Promise.all(
-        Object.values(imageData).map(url => loadImage(url))
-    );
+    const imagesWithDecades: Array<{ decade: string; img: HTMLImageElement }> = [];
 
-    const imagesWithDecades = decades.map((decade, index) => ({
-        decade,
-        img: loadedImages[index],
-    }));
+    for (const decade of decades) {
+        const img = await loadImage(imageData[decade]);
+        imagesWithDecades.push({ decade, img });
+    }
 
     // 4. Define grid layout and draw each polaroid
     const grid = { cols: 2, rows: 3, padding: 100 };
@@ -93,29 +116,29 @@ export async function createAlbumPage(imageData: Record<string, string>): Promis
         // Calculate top-left corner of the polaroid within its grid cell
         const x = grid.padding * (col + 1) + cellWidth * col + (cellWidth - polaroidWidth) / 2;
         const y = contentTopMargin + grid.padding * (row + 1) + cellHeight * row + (cellHeight - polaroidHeight) / 2;
-        
+
         ctx.save();
-        
+
         // Translate context to the center of the polaroid for rotation
         ctx.translate(x + polaroidWidth / 2, y + polaroidHeight / 2);
-        
+
         // Apply a slight, random rotation for a hand-placed look
         const rotation = (Math.random() - 0.5) * 0.1; // Radians (approx. +/- 2.8 degrees)
         ctx.rotate(rotation);
-        
+
         // Draw a soft shadow
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 35;
         ctx.shadowOffsetX = 5;
         ctx.shadowOffsetY = 10;
-        
+
         // Draw the white polaroid frame (centered at the new origin)
         ctx.fillStyle = '#fff';
         ctx.fillRect(-polaroidWidth / 2, -polaroidHeight / 2, polaroidWidth, polaroidHeight);
-        
+
         // Remove shadow for subsequent drawing
         ctx.shadowColor = 'transparent';
-        
+
         // Calculate image dimensions to fit while maintaining aspect ratio
         const aspectRatio = img.naturalWidth / img.naturalHeight;
         let drawWidth = imageContainerWidth;
@@ -129,12 +152,12 @@ export async function createAlbumPage(imageData: Record<string, string>): Promis
         // Calculate position to center the image within its container area
         const imageAreaTopMargin = (polaroidWidth - imageContainerWidth) / 2;
         const imageContainerY = -polaroidHeight / 2 + imageAreaTopMargin;
-        
+
         const imgX = -drawWidth / 2; // Horizontally centered due to context translation
         const imgY = imageContainerY + (imageContainerHeight - drawHeight) / 2;
-        
+
         ctx.drawImage(img, imgX, imgY, drawWidth, drawHeight);
-        
+
         // Draw the handwritten caption
         ctx.fillStyle = '#222';
         ctx.font = `60px 'Permanent Marker', cursive`;
@@ -146,7 +169,7 @@ export async function createAlbumPage(imageData: Record<string, string>): Promis
         const captionY = captionAreaTop + (captionAreaBottom - captionAreaTop) / 2;
 
         ctx.fillText(decade, 0, captionY);
-        
+
         ctx.restore(); // Restore context to pre-transformation state
     });
 
