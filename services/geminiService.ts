@@ -2,16 +2,15 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { GoogleGenAI } from "@google/genai";
-import type { GenerateContentResponse } from "@google/genai";
 
-const API_KEY = process.env.API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-if (!API_KEY) {
-    throw new Error("API_KEY environment variable is not set");
+if (!OPENROUTER_API_KEY) {
+    throw new Error("OPENROUTER_API_KEY environment variable is not set");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemini-2.5-flash-image";
 
 
 // --- Helper Functions ---
@@ -36,54 +35,176 @@ function extractDecade(prompt: string): string | null {
 }
 
 /**
- * Processes the Gemini API response, extracting the image or throwing an error if none is found.
- * @param response The response from the generateContent call.
+ * Processes the OpenRouter API response, extracting the image or throwing an error if none is found.
+ * @param response The response from the OpenRouter API call.
  * @returns A Blob URL string for the generated image.
  */
-function processGeminiResponse(response: GenerateContentResponse): string {
-    const imagePartFromResponse = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+function processOpenRouterResponse(response: any): string {
+    console.log("OpenRouter response:", JSON.stringify(response, null, 2));
 
-    if (imagePartFromResponse?.inlineData) {
-        const { mimeType, data } = imagePartFromResponse.inlineData;
+    // OpenRouter returns the response in the same format as OpenAI
+    const message = response.choices?.[0]?.message;
 
-        // Convert base64 to Blob for better memory efficiency
-        const byteCharacters = atob(data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
-
-        // Create and return a Blob URL
-        return URL.createObjectURL(blob);
+    if (!message) {
+        throw new Error("No message in API response");
     }
 
-    const textResponse = response.text;
-    console.error("API did not return an image. Response:", textResponse);
-    throw new Error(`The AI model responded with text instead of an image: "${textResponse || 'No text response received.'}"`);
+    // Check if images are in message.images array (OpenRouter format for Gemini)
+    if (message.images && Array.isArray(message.images) && message.images.length > 0) {
+        const imageData = message.images[0];
+        const imageUrl = imageData.image_url?.url || imageData.url;
+
+        if (imageUrl && imageUrl.startsWith('data:image/')) {
+            // It's a base64 data URL, convert to Blob URL
+            const match = imageUrl.match(/^data:(image\/\w+);base64,(.*)$/);
+            if (match) {
+                const [, mimeType, base64Data] = match;
+
+                // Convert base64 to Blob
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: mimeType });
+
+                // Create and return a Blob URL
+                console.log("Successfully converted image to Blob URL");
+                return URL.createObjectURL(blob);
+            }
+        }
+    }
+
+    // Check message.content (could be string or array)
+    let content = message.content;
+
+    // If content is a string, it might be a data URL directly
+    if (typeof content === 'string') {
+        if (content.startsWith('data:image/')) {
+            // It's a base64 data URL, convert to Blob URL
+            const match = content.match(/^data:(image\/\w+);base64,(.*)$/);
+            if (match) {
+                const [, mimeType, base64Data] = match;
+
+                // Convert base64 to Blob
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: mimeType });
+
+                // Create and return a Blob URL
+                return URL.createObjectURL(blob);
+            }
+        }
+
+        // If it's text, throw error
+        console.error("API returned text instead of image:", content);
+        throw new Error(`The AI model responded with text instead of an image: "${content}"`);
+    }
+
+    // If content is an array, look for image_url
+    if (Array.isArray(content)) {
+        const imageContent = content.find((part: any) =>
+            part.type === 'image_url' || (part.image_url && part.image_url.url)
+        );
+
+        if (imageContent?.image_url?.url) {
+            const imageUrl = imageContent.image_url.url;
+
+            // If it's a base64 data URL, convert to Blob URL for better memory efficiency
+            if (imageUrl.startsWith('data:image/')) {
+                const match = imageUrl.match(/^data:(image\/\w+);base64,(.*)$/);
+                if (match) {
+                    const [, mimeType, base64Data] = match;
+
+                    // Convert base64 to Blob
+                    const byteCharacters = atob(base64Data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: mimeType });
+
+                    // Create and return a Blob URL
+                    return URL.createObjectURL(blob);
+                }
+            }
+
+            // If it's already a URL, return it directly
+            return imageUrl;
+        }
+
+        // Check for text content
+        const textContent = content.find((part: any) => part.type === 'text')?.text;
+        if (textContent) {
+            console.error("API returned text instead of image:", textContent);
+            throw new Error(`The AI model responded with text instead of an image: "${textContent}"`);
+        }
+    }
+
+    // If we get here, we couldn't find an image
+    console.error("API did not return an image. Full response:", response);
+    throw new Error(`The AI model did not return an image. Response: ${JSON.stringify(message)}`);
 }
 
 /**
- * A wrapper for the Gemini API call that includes a retry mechanism for internal server errors.
- * @param imagePart The image part of the request payload.
- * @param textPart The text part of the request payload.
- * @returns The GenerateContentResponse from the API.
+ * A wrapper for the OpenRouter API call that includes a retry mechanism for internal server errors.
+ * @param imageDataUrl The base64 data URL of the image.
+ * @param prompt The text prompt for image generation.
+ * @returns The response from the API.
  */
-async function callGeminiWithRetry(imagePart: object, textPart: object): Promise<GenerateContentResponse> {
+async function callOpenRouterWithRetry(imageDataUrl: string, prompt: string): Promise<any> {
     const maxRetries = 3;
     const initialDelay = 1000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            return await ai.models.generateContent({
-                model: 'gemini-2.5-flash-image',
-                contents: { parts: [imagePart, textPart] },
+            const response = await fetch(OPENROUTER_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.origin, // Optional: for app attribution
+                    'X-Title': 'Past Forward', // Optional: for app attribution
+                },
+                body: JSON.stringify({
+                    model: MODEL,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: prompt
+                                },
+                                {
+                                    type: 'image_url',
+                                    image_url: {
+                                        url: imageDataUrl
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens: 1024,
+                }),
             });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`OpenRouter API error (${response.status}): ${JSON.stringify(errorData)}`);
+            }
+
+            return await response.json();
         } catch (error) {
-            console.error(`Error calling Gemini API (Attempt ${attempt}/${maxRetries}):`, error);
+            console.error(`Error calling OpenRouter API (Attempt ${attempt}/${maxRetries}):`, error);
             const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-            const isInternalError = errorMessage.includes('"code":500') || errorMessage.includes('INTERNAL');
+            const isInternalError = errorMessage.includes('500') || errorMessage.includes('INTERNAL') || errorMessage.includes('429');
 
             if (isInternalError && attempt < maxRetries) {
                 const delay = initialDelay * Math.pow(2, attempt - 1);
@@ -95,7 +216,7 @@ async function callGeminiWithRetry(imagePart: object, textPart: object): Promise
         }
     }
     // This should be unreachable due to the loop and throw logic above.
-    throw new Error("Gemini API call failed after all retries.");
+    throw new Error("OpenRouter API call failed after all retries.");
 }
 
 
@@ -111,18 +232,12 @@ export async function generateDecadeImage(imageDataUrl: string, prompt: string):
     if (!match) {
         throw new Error("Invalid image data URL format. Expected 'data:image/...;base64,...'");
     }
-    const [, mimeType, base64Data] = match;
-
-    const imagePart = {
-        inlineData: { mimeType, data: base64Data },
-    };
 
     // --- First attempt with the original prompt ---
     try {
-        console.log("Attempting generation with original prompt...");
-        const textPart = { text: prompt };
-        const response = await callGeminiWithRetry(imagePart, textPart);
-        return processGeminiResponse(response);
+        console.log("Attempting generation with original prompt via OpenRouter...");
+        const response = await callOpenRouterWithRetry(imageDataUrl, prompt);
+        return processOpenRouterResponse(response);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
         const isNoImageError = errorMessage.includes("The AI model responded with text instead of an image");
@@ -139,9 +254,8 @@ export async function generateDecadeImage(imageDataUrl: string, prompt: string):
             try {
                 const fallbackPrompt = getFallbackPrompt(decade);
                 console.log(`Attempting generation with fallback prompt for ${decade}...`);
-                const fallbackTextPart = { text: fallbackPrompt };
-                const fallbackResponse = await callGeminiWithRetry(imagePart, fallbackTextPart);
-                return processGeminiResponse(fallbackResponse);
+                const fallbackResponse = await callOpenRouterWithRetry(imageDataUrl, fallbackPrompt);
+                return processOpenRouterResponse(fallbackResponse);
             } catch (fallbackError) {
                 console.error("Fallback prompt also failed.", fallbackError);
                 const finalErrorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);

@@ -3,7 +3,7 @@
 ## Stack & Architecture
 - **Stack**: Vite + React 19 + TypeScript. All logic runs client-side; no server layer. `index.html` injects Tailwind via CDN and declares import maps for browser ESM resolution.
 - **Build & Run**: `npm install` then `npm run dev` (serves on `0.0.0.0:3000`). `npm run build` creates the production bundle. No automated tests are defined.
-- **Env Config**: Place `GEMINI_API_KEY=<key>` in `.env.local`. `vite.config.ts` maps this to both `process.env.API_KEY` and `process.env.GEMINI_API_KEY`, matching the expectation in `services/geminiService.ts`.
+- **Env Config**: Place `OPENROUTER_API_KEY=<key>` in `.env.local`. `vite.config.ts` maps this to `process.env.OPENROUTER_API_KEY`. Get your API key at https://openrouter.ai/keys.
 
 ## Component Architecture (Refactored)
 - **App.tsx** (196 lines): Main orchestrator wrapped in `ToastProvider`. Manages state machine (`idle → image-uploaded → generating → results-shown`) and coordinates child components.
@@ -42,11 +42,13 @@
 
 ## Services & Utilities
 
-### Gemini Service
+### OpenRouter Service (geminiService.ts)
 - **Location**: `services/geminiService.ts`
-- **Behavior**: Wraps `@google/genai`. Parses uploaded data URL, retries internal errors with exponential backoff, falls back to secondary prompt if Gemini returns text.
-- **Memory**: Returns **Blob URLs** (not base64) via `processGeminiResponse()`.
+- **API**: Uses OpenRouter API (https://openrouter.ai/api/v1/chat/completions) with model `google/gemini-2.5-flash-image`.
+- **Behavior**: Sends image + text prompt via REST API. Retries internal errors with exponential backoff, falls back to secondary prompt if model returns text instead of image.
+- **Memory**: Returns **Blob URLs** (not base64) via `processOpenRouterResponse()`.
 - **Helpers**: Reuse `extractDecade` and `getFallbackPrompt` when extending prompts.
+- **Authentication**: Uses Bearer token in Authorization header with `OPENROUTER_API_KEY`.
 
 ### Album Utils
 - **Location**: `lib/albumUtils.ts`

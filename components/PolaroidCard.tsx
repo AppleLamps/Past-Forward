@@ -31,7 +31,7 @@ const LoadingSpinner = () => (
 
 const ErrorDisplay = () => (
     <div className="flex items-center justify-center h-full">
-         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
     </div>
@@ -61,10 +61,16 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
             setIsImageLoaded(false);
         }
         if (status === 'done' && imageUrl) {
-            setIsDeveloped(false);
-            setIsImageLoaded(false);
+            // For uploaded photos (caption "Your Photo"), skip the animation
+            if (caption === "Your Photo") {
+                setIsDeveloped(true);
+                // Don't reset isImageLoaded - let it be set by onLoad
+            } else {
+                setIsDeveloped(false);
+                setIsImageLoaded(false);
+            }
         }
-    }, [imageUrl, status]);
+    }, [imageUrl, status, caption]);
 
     // When the image is loaded, start the developing animation.
     useEffect(() => {
@@ -75,6 +81,11 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
             return () => clearTimeout(timer);
         }
     }, [isImageLoaded]);
+
+    // Debug logging
+    useEffect(() => {
+        console.log(`[${caption}] State changed - isDeveloped: ${isDeveloped}, isImageLoaded: ${isImageLoaded}, imageUrl: ${imageUrl?.substring(0, 30)}`);
+    }, [isDeveloped, isImageLoaded, imageUrl, caption]);
 
     const handleDragStart = () => {
         // Reset velocity on new drag to prevent false triggers from old data
@@ -130,7 +141,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
                                     </svg>
                                 </button>
                             )}
-                             {isMobile && onShake && (
+                            {isMobile && onShake && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -147,26 +158,40 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
                         </div>
 
 
-                        {/* The developing chemical overlay - fades out */}
-                        <div
-                            className={`absolute inset-0 z-10 bg-[#3a322c] transition-opacity duration-[3500ms] ease-out ${
-                                isDeveloped ? 'opacity-0' : 'opacity-100'
-                            }`}
-                            aria-hidden="true"
-                        />
-                        
+                        {/* The developing chemical overlay - fades out (skip for uploaded photos) */}
+                        {caption !== "Your Photo" && (
+                            <div
+                                className={`absolute inset-0 z-10 bg-[#3a322c] transition-opacity duration-[3500ms] ease-out ${isDeveloped ? 'opacity-0' : 'opacity-100'
+                                    }`}
+                                aria-hidden="true"
+                            />
+                        )}
+
                         {/* The Image - fades in and color corrects */}
                         <img
                             key={imageUrl}
                             src={imageUrl}
                             alt={caption}
-                            onLoad={() => setIsImageLoaded(true)}
-                            className={`w-full h-full object-cover transition-all duration-[4000ms] ease-in-out ${
-                                isDeveloped 
-                                ? 'opacity-100 filter-none' 
-                                : 'opacity-80 filter sepia(1) contrast(0.8) brightness(0.8)'
-                            }`}
-                            style={{ opacity: isImageLoaded ? undefined : 0 }}
+                            onLoad={() => {
+                                console.log(`Image loaded for ${caption}:`, imageUrl?.substring(0, 50));
+                                console.log(`isDeveloped: ${isDeveloped}, isImageLoaded will be set to true`);
+                                setIsImageLoaded(true);
+                            }}
+                            onError={(e) => {
+                                console.error(`Failed to load image for ${caption}:`, imageUrl?.substring(0, 50), e);
+                            }}
+                            className={`w-full h-full object-cover ${caption === "Your Photo"
+                                ? ''
+                                : `transition-all duration-[4000ms] ease-in-out ${isDeveloped
+                                    ? 'opacity-100 filter-none'
+                                    : 'opacity-80 filter sepia(1) contrast(0.8) brightness(0.8)'
+                                }`
+                                }`}
+                            style={{
+                                opacity: caption === "Your Photo"
+                                    ? (isImageLoaded ? 1 : 0)
+                                    : (isImageLoaded ? undefined : 0)
+                            }}
                         />
                     </>
                 )}
@@ -193,7 +218,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
 
     return (
         <DraggableCardContainer>
-            <DraggableCardBody 
+            <DraggableCardBody
                 className="bg-neutral-100 dark:bg-neutral-100 !p-4 !pb-16 flex flex-col items-center justify-start aspect-[3/4] w-80 max-w-full"
                 dragConstraintsRef={dragConstraintsRef}
                 onDragStart={handleDragStart}

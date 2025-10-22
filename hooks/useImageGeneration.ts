@@ -21,13 +21,13 @@ interface UseImageGenerationOptions {
 }
 
 export function useImageGeneration(options: UseImageGenerationOptions) {
-    const { decades, concurrencyLimit = 2, onError, onSuccess } = options;
+    const { decades, concurrencyLimit = 6, onError, onSuccess } = options;
     const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImage>>({});
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
     const generateAll = useCallback(async (uploadedImage: string) => {
         setIsLoading(true);
-        
+
         const initialImages: Record<string, GeneratedImage> = {};
         decades.forEach(decade => {
             initialImages[decade] = { status: 'pending' };
@@ -40,12 +40,12 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
             try {
                 const prompt = `Reimagine the person in this photo in the style of the ${decade}. This includes clothing, hairstyle, photo quality, and the overall aesthetic of that decade. The output must be a photorealistic image showing the person clearly.`;
                 const resultUrl = await generateDecadeImage(uploadedImage, prompt);
-                
+
                 setGeneratedImages(prev => ({
                     ...prev,
                     [decade]: { status: 'done', url: resultUrl },
                 }));
-                
+
                 onSuccess?.(decade, resultUrl);
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -78,7 +78,7 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
         if (generatedImages[decade]?.status === 'pending') {
             return;
         }
-        
+
         console.log(`Regenerating image for ${decade}...`);
 
         setGeneratedImages(prev => ({
@@ -89,12 +89,12 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
         try {
             const prompt = `Reimagine the person in this photo in the style of the ${decade}. This includes clothing, hairstyle, photo quality, and the overall aesthetic of that decade. The output must be a photorealistic image showing the person clearly.`;
             const resultUrl = await generateDecadeImage(uploadedImage, prompt);
-            
+
             setGeneratedImages(prev => ({
                 ...prev,
                 [decade]: { status: 'done', url: resultUrl },
             }));
-            
+
             onSuccess?.(decade, resultUrl);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
