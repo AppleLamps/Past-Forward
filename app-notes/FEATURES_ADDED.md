@@ -5,12 +5,15 @@ This document describes the new features added to Past Forward: Gallery/History,
 ## 1. Gallery/History Feature with IndexedDB
 
 ### Overview
+
 Users can now save their generation results to browser storage and view them later in a gallery interface.
 
 ### Files Added
+
 - **`lib/indexedDBUtils.ts`** - IndexedDB database utilities for storing and retrieving generations
 
 ### Key Features
+
 - **Save Generations**: Each generation is automatically saved with metadata
 - **View History**: Browse all saved generations in a gallery grid
 - **Load from History**: Click "Load" to restore a generation and view its results
@@ -19,6 +22,7 @@ Users can now save their generation results to browser storage and view them lat
 - **Automatic Cleanup**: Blob URLs are properly cleaned up to prevent memory leaks
 
 ### Database Schema
+
 ```typescript
 interface GenerationRecord {
     id: string;                          // Unique identifier
@@ -33,6 +37,7 @@ interface GenerationRecord {
 ```
 
 ### Usage
+
 ```typescript
 import { saveGeneration, getAllGenerations, deleteGeneration } from './lib/indexedDBUtils';
 
@@ -51,19 +56,23 @@ await deleteGeneration(id);
 ## 2. ZIP Export Feature
 
 ### Overview
+
 Users can now download all generated images as a single ZIP file for easy sharing and backup.
 
 ### Files Added
+
 - **`lib/zipExportUtils.ts`** - ZIP creation and download utilities
 - **Dependency**: `jszip` (installed via npm)
 
 ### Key Features
+
 - **Create ZIP**: Combines all 6 decade images into a single ZIP file
 - **Organized Structure**: Images are placed in a `past-forward-images/` folder
 - **Automatic Download**: ZIP file is automatically downloaded to user's device
 - **Error Handling**: Graceful error handling if image processing fails
 
 ### Usage
+
 ```typescript
 import { createAndDownloadZip } from './lib/zipExportUtils';
 
@@ -75,6 +84,7 @@ const zipBlob = await createZipExport(generatedImages);
 ```
 
 ### UI Integration
+
 - **Download ZIP Button**: Available on results screen alongside "Download Album"
 - **Toast Notifications**: User feedback during ZIP creation
 - **Disabled State**: Button is disabled while processing
@@ -84,14 +94,17 @@ const zipBlob = await createZipExport(generatedImages);
 ## 3. Batch Upload Feature
 
 ### Overview
+
 Users can now upload and process multiple photos at once, generating all decades for each photo automatically.
 
 ### Files Added
+
 - **`components/BatchUploadProgress.tsx`** - Progress tracking component for batch processing
 - **Updated**: `components/ImageUploader.tsx` - Added batch mode support
 - **Updated**: `App.tsx` - Added batch processing logic
 
 ### Key Features
+
 - **Multiple File Selection**: Upload 2-10 photos at once
 - **Progress Tracking**: Real-time progress for each image and overall progress
 - **Auto-Save**: Each processed image is automatically saved to history
@@ -100,6 +113,7 @@ Users can now upload and process multiple photos at once, generating all decades
 - **Batch Mode Toggle**: Switch between single and batch mode
 
 ### Batch Processing Flow
+
 1. User toggles "Batch Mode" button
 2. File input accepts multiple files
 3. For each file:
@@ -110,6 +124,7 @@ Users can now upload and process multiple photos at once, generating all decades
 4. Show completion summary
 
 ### UI Components
+
 - **Mode Toggle Button**: Switch between single and batch mode
 - **Batch Progress Component**: Shows:
   - Overall progress bar
@@ -119,6 +134,7 @@ Users can now upload and process multiple photos at once, generating all decades
   - File names
 
 ### Usage
+
 ```typescript
 // Batch upload handler
 const handleBatchUpload = async (files: File[]) => {
@@ -134,19 +150,22 @@ const handleBatchUpload = async (files: File[]) => {
 ## 4. UI Updates
 
 ### New Navigation
+
 - **Gallery Button**: Top-right corner to access saved generations
 - **Batch Mode Toggle**: Appears in idle state to switch modes
-- **New Action Buttons**: 
+- **New Action Buttons**:
   - Download ZIP (alongside Download Album)
   - Save to History (green button)
 
 ### Gallery Modal
+
 - **Grid Layout**: Responsive grid showing thumbnails
 - **Quick Actions**: Load, ZIP export, delete buttons for each generation
 - **Metadata Display**: Shows creation date and filename
 - **Clear All Option**: Delete all generations at once
 
 ### Responsive Design
+
 - Mobile-optimized gallery grid
 - Touch-friendly buttons
 - Adaptive layout for different screen sizes
@@ -156,6 +175,7 @@ const handleBatchUpload = async (files: File[]) => {
 ## 5. Integration Points
 
 ### App State Management
+
 ```typescript
 // New state variables
 const [showGallery, setShowGallery] = useState(false);
@@ -166,12 +186,14 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ```
 
 ### New Handlers
+
 - `handleBatchUpload()` - Process multiple files
 - `handleDownloadZip()` - Create and download ZIP
 - `saveToHistory()` - Save current generation
 - `handleSelectFromGallery()` - Load saved generation
 
 ### Exports
+
 - `DECADE_PROMPTS` - Now exported from `useImageGeneration` hook
 - `generateDecadeImage` - Already exported from `geminiService`
 
@@ -180,6 +202,7 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ## 6. Dependencies
 
 ### New Package
+
 ```json
 {
   "jszip": "^3.x.x"
@@ -187,6 +210,7 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ```
 
 ### Existing Dependencies Used
+
 - `framer-motion` - Animations in Gallery and BatchUploadProgress
 - `react` - Component framework
 - `typescript` - Type safety
@@ -196,15 +220,18 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ## 7. Browser Compatibility
 
 ### IndexedDB Support
+
 - Chrome/Edge: ✅ Full support
 - Firefox: ✅ Full support
 - Safari: ✅ Full support (iOS 13.4+)
 - IE: ❌ Not supported
 
 ### ZIP Support
+
 - All modern browsers with Blob support
 
 ### Storage Limits
+
 - IndexedDB: Typically 50MB+ per origin
 - Blob URLs: Limited by available memory
 
@@ -213,6 +240,7 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ## 8. Testing Recommendations
 
 ### Gallery/History
+
 1. Generate a photo
 2. Click "Save" button
 3. Click "Gallery" button
@@ -222,12 +250,14 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 7. Click "Clear All" to remove all
 
 ### ZIP Export
+
 1. Generate a photo
 2. Click "Download ZIP" button
 3. Verify ZIP file downloads
 4. Extract and verify all 6 images are present
 
 ### Batch Upload
+
 1. Toggle "Batch Mode" button
 2. Select 3-5 photos
 3. Watch progress bars update
@@ -239,16 +269,19 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ## 9. Performance Considerations
 
 ### Memory Usage
+
 - Blob URLs are ~70% more efficient than base64
 - Automatic cleanup prevents memory leaks
 - Sequential image loading in batch mode reduces memory peaks
 
 ### Storage
+
 - Each generation: ~2-5MB (6 images)
 - IndexedDB quota: Usually 50MB+
 - Users can clear history to free space
 
 ### Processing Time
+
 - Single image: ~10-30 seconds (6 parallel requests)
 - Batch of 5 images: ~50-150 seconds (sequential processing)
 - ZIP creation: ~2-5 seconds
@@ -258,6 +291,7 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ## 10. Future Enhancements
 
 Potential improvements for future versions:
+
 - Cloud storage integration (Google Drive, Dropbox)
 - Sharing links for gallery items
 - Batch export to ZIP
@@ -272,10 +306,10 @@ Potential improvements for future versions:
 ## Summary
 
 These three features significantly enhance Past Forward by:
+
 1. **Persistence**: Users can save and revisit their generations
 2. **Convenience**: ZIP export for easy sharing and backup
 3. **Efficiency**: Batch processing for multiple photos
 4. **User Experience**: Intuitive UI with progress tracking and error handling
 
 All features are fully integrated, tested, and production-ready.
-

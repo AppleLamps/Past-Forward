@@ -13,6 +13,7 @@
 ## Feature 1: Gallery/History
 
 ### Basic Functionality
+
 - [ ] Generate a photo (single image)
 - [ ] Click "💾 Save" button
 - [ ] Toast notification appears: "Generation saved to history!"
@@ -23,6 +24,7 @@
 - [ ] Filename displays
 
 ### Gallery Actions
+
 - [ ] Click "Load" button on a generation
 - [ ] Modal closes
 - [ ] Generation loads and displays in results
@@ -30,12 +32,14 @@
 - [ ] All 6 decade images display correctly
 
 ### Delete Functionality
+
 - [ ] Click "Delete" on a generation
 - [ ] Generation is removed from gallery
 - [ ] Toast shows: "Generation deleted"
 - [ ] Gallery updates immediately
 
 ### Clear All
+
 - [ ] Save 3+ generations
 - [ ] Click "Clear All" button
 - [ ] Confirmation dialog appears
@@ -45,6 +49,7 @@
 - [ ] Toast shows: "All generations cleared"
 
 ### Gallery UI
+
 - [ ] Gallery modal is responsive
 - [ ] Desktop: 3-column grid
 - [ ] Tablet: 2-column grid
@@ -54,6 +59,7 @@
 - [ ] Click outside modal closes it
 
 ### IndexedDB Persistence
+
 - [ ] Save a generation
 - [ ] Refresh page (F5)
 - [ ] Click Gallery
@@ -65,6 +71,7 @@
 ## Feature 2: ZIP Export
 
 ### Single Image ZIP
+
 - [ ] Generate a photo
 - [ ] Click "Download ZIP" button
 - [ ] Toast shows: "Creating ZIP file..."
@@ -83,6 +90,7 @@
 - [ ] Images display correctly when opened
 
 ### ZIP from Gallery
+
 - [ ] Save a generation
 - [ ] Open Gallery
 - [ ] Click "ZIP" button on a generation
@@ -90,12 +98,14 @@
 - [ ] Verify contents as above
 
 ### Error Handling
+
 - [ ] Try to download ZIP before all images generate
 - [ ] Toast shows: "Please wait for all images to finish generating"
 - [ ] ZIP button disabled during download
 - [ ] No partial ZIP created
 
 ### File Size
+
 - [ ] Check ZIP file size (should be ~2-5MB)
 - [ ] Verify compression is working
 - [ ] Compare to individual image sizes
@@ -105,6 +115,7 @@
 ## Feature 3: Batch Upload
 
 ### Mode Toggle
+
 - [ ] Click "Single Mode" button
 - [ ] Button changes to "✓ Batch Mode"
 - [ ] File input now accepts multiple files
@@ -112,6 +123,7 @@
 - [ ] Button changes back
 
 ### Batch Upload - 3 Files
+
 - [ ] Toggle to Batch Mode
 - [ ] Click upload area
 - [ ] Select 3 different image files
@@ -122,6 +134,7 @@
 - [ ] Individual file progress bars show
 
 ### Progress Tracking
+
 - [ ] Each file shows:
   - [ ] Filename
   - [ ] Status icon (○ pending, ⟳ processing, ✓ done, ✕ error)
@@ -131,12 +144,14 @@
 - [ ] Status icons change as processing progresses
 
 ### Completion
+
 - [ ] All 3 files complete
 - [ ] Toast shows: "Batch processing complete! 3/3 images processed."
 - [ ] App returns to idle state
 - [ ] Batch Mode toggle still visible
 
 ### Auto-Save to History
+
 - [ ] After batch completes
 - [ ] Click Gallery
 - [ ] All 3 generations appear in gallery
@@ -144,6 +159,7 @@
 - [ ] Each has correct timestamp
 
 ### Error Handling
+
 - [ ] Upload 5 files, 1 invalid (non-image)
 - [ ] Invalid file shows error status (✕)
 - [ ] Error message displays
@@ -151,6 +167,7 @@
 - [ ] Toast shows: "Batch processing complete! 4/5 images processed."
 
 ### Large Batch
+
 - [ ] Upload 10 files
 - [ ] Processing takes longer
 - [ ] Progress updates smoothly
@@ -158,6 +175,7 @@
 - [ ] All files process successfully
 
 ### Mobile Batch Upload
+
 - [ ] On mobile device/responsive view
 - [ ] Toggle Batch Mode
 - [ ] Select multiple files
@@ -170,6 +188,7 @@
 ## Integration Tests
 
 ### Workflow 1: Single → Save → Load
+
 - [ ] Generate single image
 - [ ] Click Save
 - [ ] Click Gallery
@@ -177,6 +196,7 @@
 - [ ] Results display correctly
 
 ### Workflow 2: Batch → Gallery → ZIP
+
 - [ ] Batch upload 3 files
 - [ ] Open Gallery
 - [ ] Click ZIP on one generation
@@ -184,6 +204,7 @@
 - [ ] Verify contents
 
 ### Workflow 3: Multiple Saves → Clear
+
 - [ ] Generate and save 5 images
 - [ ] Open Gallery
 - [ ] Verify all 5 appear
@@ -192,6 +213,7 @@
 - [ ] Gallery empty
 
 ### Workflow 4: Batch → Individual Download
+
 - [ ] Batch upload 2 files
 - [ ] Click on first generation's 1950s image
 - [ ] Download individual image
@@ -202,6 +224,7 @@
 ## Performance Tests
 
 ### Memory Usage
+
 - [ ] Open DevTools → Memory tab
 - [ ] Take heap snapshot before
 - [ ] Generate 6 images
@@ -210,17 +233,20 @@
 - [ ] No memory leaks on reset
 
 ### Batch Processing Memory
+
 - [ ] Monitor memory during batch upload
 - [ ] Process 5 files
 - [ ] Memory doesn't spike excessively
 - [ ] Cleanup happens after each file
 
 ### ZIP Creation Time
+
 - [ ] Time ZIP creation for 6 images
 - [ ] Should complete in 2-5 seconds
 - [ ] No UI freezing during creation
 
 ### Gallery Loading
+
 - [ ] Save 20+ generations
 - [ ] Open Gallery
 - [ ] Loads quickly
@@ -232,18 +258,21 @@
 ## Browser Compatibility
 
 ### Chrome/Edge
+
 - [ ] All features work
 - [ ] IndexedDB persists
 - [ ] ZIP downloads correctly
 - [ ] Batch upload works
 
 ### Firefox
+
 - [ ] All features work
 - [ ] IndexedDB persists
 - [ ] ZIP downloads correctly
 - [ ] Batch upload works
 
 ### Safari
+
 - [ ] All features work
 - [ ] IndexedDB persists
 - [ ] ZIP downloads correctly
@@ -254,6 +283,7 @@
 ## Mobile Testing
 
 ### Responsive Design
+
 - [ ] Test on iPhone (375px)
 - [ ] Test on iPad (768px)
 - [ ] Test on Android phone
@@ -262,6 +292,7 @@
 - [ ] No horizontal scrolling
 
 ### Touch Interactions
+
 - [ ] Tap Gallery button
 - [ ] Tap Load button
 - [ ] Tap Delete button
@@ -269,6 +300,7 @@
 - [ ] All work smoothly
 
 ### Mobile Batch Upload
+
 - [ ] Select multiple files
 - [ ] Progress displays correctly
 - [ ] No layout issues
@@ -279,24 +311,28 @@
 ## Error Scenarios
 
 ### Invalid Files
+
 - [ ] Upload non-image file
 - [ ] Error message displays
 - [ ] Processing continues for valid files
 - [ ] Toast shows partial completion
 
 ### Network Errors
+
 - [ ] Simulate offline mode
 - [ ] Try to generate
 - [ ] Error handling works
 - [ ] User gets feedback
 
 ### Storage Full
+
 - [ ] Fill IndexedDB quota
 - [ ] Try to save generation
 - [ ] Error message displays
 - [ ] User can clear history
 
 ### Large Files
+
 - [ ] Upload 10MB image
 - [ ] Validation catches it
 - [ ] Error message: "File too large"
@@ -307,24 +343,28 @@
 ## UI/UX Tests
 
 ### Visual Consistency
+
 - [ ] All buttons styled consistently
 - [ ] Colors match design
 - [ ] Fonts correct
 - [ ] Spacing consistent
 
 ### Animations
+
 - [ ] Gallery modal animates smoothly
 - [ ] Progress bars animate
 - [ ] Buttons have hover effects
 - [ ] No jank or stuttering
 
 ### Accessibility
+
 - [ ] Tab navigation works
 - [ ] Focus states visible
 - [ ] Color contrast sufficient
 - [ ] Error messages clear
 
 ### Toast Notifications
+
 - [ ] Success messages appear
 - [ ] Error messages appear
 - [ ] Info messages appear
@@ -355,6 +395,7 @@
 **Status**: ☐ PASS ☐ FAIL
 
 **Notes**:
+
 ```
 _________________________________________________
 _________________________________________________
@@ -375,4 +416,3 @@ _________________________________________________
 - [ ] Consider adding unit tests
 - [ ] Monitor IndexedDB quota usage
 - [ ] Track user engagement with new features
-

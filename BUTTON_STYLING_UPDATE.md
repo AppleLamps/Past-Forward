@@ -11,12 +11,15 @@ The Gallery button and Batch/Single mode toggle button have been updated to matc
 ### Button Classes Defined
 
 #### Primary Button
+
 ```typescript
 const primaryButtonClasses = "font-permanent-marker text-xl text-center text-black bg-yellow-400 py-3 px-8 rounded-sm transform transition-transform duration-200 hover:scale-105 hover:-rotate-2 hover:bg-yellow-300 shadow-[2px_2px_0px_2px_rgba(0,0,0,0.2)]";
 ```
+
 **Used for**: Download Album button (main action)
 
 **Features**:
+
 - Yellow background (#FBBF24)
 - Black text
 - Permanent Marker font
@@ -25,12 +28,15 @@ const primaryButtonClasses = "font-permanent-marker text-xl text-center text-bla
 - Playful -2° rotation on hover
 
 #### Secondary Button
+
 ```typescript
 const secondaryButtonClasses = "font-permanent-marker text-xl text-center text-white bg-white/10 backdrop-blur-sm border-2 border-white/80 py-3 px-8 rounded-sm transform transition-transform duration-200 hover:scale-105 hover:rotate-2 hover:bg-white hover:text-black";
 ```
+
 **Used for**: Download ZIP, Start Over buttons
 
 **Features**:
+
 - Semi-transparent white background with backdrop blur
 - White text (inverts to black on hover)
 - White border
@@ -38,12 +44,15 @@ const secondaryButtonClasses = "font-permanent-marker text-xl text-center text-w
 - Playful +2° rotation on hover
 
 #### Navigation Button (NEW)
+
 ```typescript
 const navButtonClasses = "font-permanent-marker text-lg text-center text-white bg-white/10 backdrop-blur-sm border-2 border-white/60 py-2 px-6 rounded-sm transform transition-all duration-200 hover:scale-105 hover:rotate-1 hover:bg-white hover:text-black shadow-[2px_2px_0px_1px_rgba(255,255,255,0.1)]";
 ```
+
 **Used for**: Gallery button (top-right navigation)
 
 **Features**:
+
 - Similar to secondary button but smaller
 - Slightly more subtle border (60% opacity)
 - Smaller padding (py-2 px-6 vs py-3 px-8)
@@ -52,12 +61,15 @@ const navButtonClasses = "font-permanent-marker text-lg text-center text-white b
 - Gentle +1° rotation on hover
 
 #### Toggle Button (NEW)
+
 ```typescript
 const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6 rounded-sm transform transition-all duration-200 hover:scale-105 shadow-[2px_2px_0px_1px_rgba(0,0,0,0.2)]";
 ```
+
 **Used for**: Batch/Single mode toggle button
 
 **Features**:
+
 - Base classes for toggle functionality
 - Combined with conditional classes for active/inactive states
 - Scale animation on hover
@@ -70,6 +82,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 ### 1. Gallery Button (Top-Right Navigation)
 
 **Before**:
+
 ```tsx
 <button
     onClick={() => setShowGallery(true)}
@@ -80,6 +93,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 ```
 
 **After**:
+
 ```tsx
 <button
     onClick={() => setShowGallery(true)}
@@ -90,6 +104,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 ```
 
 **Improvements**:
+
 - ✅ Matches app's design system
 - ✅ Uses Permanent Marker font
 - ✅ Semi-transparent background with backdrop blur
@@ -101,6 +116,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 ### 2. Batch/Single Mode Toggle Button
 
 **Before**:
+
 ```tsx
 <button
     onClick={() => setIsBatchMode(!isBatchMode)}
@@ -114,6 +130,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 ```
 
 **After**:
+
 ```tsx
 <button
     onClick={() => setIsBatchMode(!isBatchMode)}
@@ -127,6 +144,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 ```
 
 **Improvements**:
+
 - ✅ Matches app's design system
 - ✅ Uses Permanent Marker font
 - ✅ Active state (Batch Mode): Yellow background like primary button
@@ -142,6 +160,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 ### Common Design Elements
 
 All buttons now share:
+
 1. **Font**: Permanent Marker (playful, hand-drawn aesthetic)
 2. **Animations**: Scale (1.05x) + subtle rotation on hover
 3. **Transitions**: Smooth 200ms duration
@@ -153,16 +172,19 @@ All buttons now share:
 ### Visual Hierarchy
 
 **Primary Actions** (Yellow):
+
 - Download Album
 - Batch Mode (active state)
 
 **Secondary Actions** (White/Transparent):
+
 - Download ZIP
 - Start Over
 - Gallery
 - Single Mode (inactive state)
 
 **Tertiary Actions** (Green):
+
 - Save to History
 
 ---
@@ -170,6 +192,7 @@ All buttons now share:
 ## 📱 Responsive Behavior
 
 All buttons maintain consistent styling across:
+
 - ✅ Desktop (> 768px)
 - ✅ Tablet (768px)
 - ✅ Mobile (< 768px)
@@ -183,17 +206,20 @@ The buttons scale appropriately and maintain touch-friendly sizes on mobile devi
 ### Hover Effects
 
 **Gallery Button**:
+
 - Scale: 1.05x
 - Rotate: +1°
 - Background: white/10 → white
 - Text: white → black
 
 **Batch Mode Toggle (Active)**:
+
 - Scale: 1.05x
 - Rotate: -1°
 - Background: yellow-400 → yellow-300
 
 **Batch Mode Toggle (Inactive)**:
+
 - Scale: 1.05x
 - Rotate: +1°
 - Background: white/10 → white
@@ -206,6 +232,7 @@ The buttons scale appropriately and maintain touch-friendly sizes on mobile devi
 **File**: `App.tsx`
 
 **Lines**:
+
 - Button class definitions: Lines 24-27
 - Gallery button: Lines 327-335
 - Batch/Single toggle: Lines 343-362
@@ -225,6 +252,7 @@ The buttons scale appropriately and maintain touch-friendly sizes on mobile devi
 ## 🎉 Summary
 
 The Gallery button and Batch/Single mode toggle button now have:
+
 - ✅ Consistent styling with existing buttons
 - ✅ Matching visual hierarchy and polish
 - ✅ Same animations/transitions on hover
@@ -239,4 +267,3 @@ The buttons are now visually cohesive with the rest of the application and provi
 **Update Date**: October 22, 2025
 **Status**: ✅ COMPLETE
 **Build**: ✅ SUCCESSFUL
-

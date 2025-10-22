@@ -95,6 +95,7 @@ const handleBatchUpload = async (files: File[]) => {
 ## Component Props
 
 ### Gallery
+
 ```typescript
 interface GalleryProps {
     onClose: () => void;
@@ -103,6 +104,7 @@ interface GalleryProps {
 ```
 
 ### BatchUploadProgress
+
 ```typescript
 interface BatchUploadProgressProps {
     items: BatchItem[];
@@ -121,6 +123,7 @@ interface BatchItem {
 ```
 
 ### ImageUploader (Updated)
+
 ```typescript
 interface ImageUploaderProps {
     onImageSelect: (file: File) => void;
@@ -132,6 +135,7 @@ interface ImageUploaderProps {
 ## State Management
 
 ### New App State
+
 ```typescript
 const [showGallery, setShowGallery] = useState(false);
 const [isBatchMode, setIsBatchMode] = useState(false);
@@ -143,6 +147,7 @@ const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 ## Common Tasks
 
 ### Add a generation to history
+
 ```typescript
 const record: GenerationRecord = {
     id: `gen-${Date.now()}`,
@@ -155,6 +160,7 @@ await saveGeneration(record);
 ```
 
 ### Load a generation from history
+
 ```typescript
 const record = await getGeneration(id);
 setUploadedImage(record.originalImageUrl);
@@ -162,6 +168,7 @@ setUploadedImage(record.originalImageUrl);
 ```
 
 ### Export to ZIP
+
 ```typescript
 const imageData = {
     '1950s': blobUrl1,
@@ -172,6 +179,7 @@ await createAndDownloadZip(imageData, 'my-generations');
 ```
 
 ### Process batch
+
 ```typescript
 const files = Array.from(fileInput.files);
 for (const file of files) {
@@ -193,6 +201,7 @@ for (const file of files) {
 ## Error Handling
 
 ### IndexedDB Errors
+
 ```typescript
 try {
     await saveGeneration(record);
@@ -203,6 +212,7 @@ try {
 ```
 
 ### ZIP Export Errors
+
 ```typescript
 try {
     await createAndDownloadZip(images);
@@ -213,6 +223,7 @@ try {
 ```
 
 ### Batch Processing Errors
+
 ```typescript
 try {
     // Process file
@@ -238,6 +249,7 @@ try {
 ## Testing
 
 ### Unit Tests (Recommended)
+
 ```typescript
 // Test IndexedDB
 describe('indexedDBUtils', () => {
@@ -260,6 +272,7 @@ describe('zipExportUtils', () => {
 ```
 
 ### Manual Testing
+
 1. Open DevTools → Application → IndexedDB
 2. Verify database and object store created
 3. Save a generation and check IndexedDB
@@ -269,6 +282,7 @@ describe('zipExportUtils', () => {
 ## Debugging
 
 ### Check IndexedDB
+
 ```javascript
 // In browser console
 const db = await new Promise(r => indexedDB.open('PastForwardDB').onsuccess = e => r(e.target.result));
@@ -278,12 +292,14 @@ store.getAll().onsuccess = e => console.log(e.target.result);
 ```
 
 ### Monitor Blob URLs
+
 ```javascript
 // Check active blob URLs
 console.log(performance.memory);
 ```
 
 ### Batch Progress
+
 ```typescript
 // Add logging
 console.log(`Processing ${i + 1}/${files.length}: ${file.name}`);
@@ -308,4 +324,3 @@ console.log(`Progress: ${batchProgress}%`);
 - `FEATURES_ADDED.md` - Feature overview
 - `IMPROVEMENTS.md` - Previous improvements
 - `README.md` - Project overview
-

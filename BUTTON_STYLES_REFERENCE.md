@@ -7,6 +7,7 @@ Quick reference guide for all button styles in the application.
 ## 🎨 Button Style Classes
 
 ### Primary Button
+
 **Usage**: Main actions (Download Album, Batch Mode active)
 
 ```css
@@ -27,6 +28,7 @@ shadow-[2px_2px_0px_2px_rgba(0,0,0,0.2)]
 ```
 
 **Visual**:
+
 - Background: Yellow (#FBBF24)
 - Text: Black
 - Padding: 12px 32px
@@ -37,6 +39,7 @@ shadow-[2px_2px_0px_2px_rgba(0,0,0,0.2)]
 ---
 
 ### Secondary Button
+
 **Usage**: Secondary actions (Download ZIP, Start Over)
 
 ```css
@@ -60,6 +63,7 @@ hover:text-black
 ```
 
 **Visual**:
+
 - Background: White 10% opacity + blur
 - Text: White (→ Black on hover)
 - Border: White 80% opacity, 2px
@@ -70,6 +74,7 @@ hover:text-black
 ---
 
 ### Navigation Button
+
 **Usage**: Navigation actions (Gallery button)
 
 ```css
@@ -94,6 +99,7 @@ shadow-[2px_2px_0px_1px_rgba(255,255,255,0.1)]
 ```
 
 **Visual**:
+
 - Background: White 10% opacity + blur
 - Text: White (→ Black on hover)
 - Border: White 60% opacity, 2px
@@ -105,6 +111,7 @@ shadow-[2px_2px_0px_1px_rgba(255,255,255,0.1)]
 ---
 
 ### Toggle Button (Base)
+
 **Usage**: Toggle buttons (Batch/Single mode)
 
 ```css
@@ -123,6 +130,7 @@ shadow-[2px_2px_0px_1px_rgba(0,0,0,0.2)]
 **Combined with conditional classes**:
 
 **Active State** (Batch Mode):
+
 ```css
 bg-yellow-400 
 text-black 
@@ -131,6 +139,7 @@ hover:-rotate-1
 ```
 
 **Inactive State** (Single Mode):
+
 ```css
 bg-white/10 
 backdrop-blur-sm 
@@ -143,6 +152,7 @@ hover:rotate-1
 ```
 
 **Visual**:
+
 - **Active**: Yellow background, black text, rotate -1° on hover
 - **Inactive**: White 10% opacity + blur, white text, rotate +1° on hover
 - Padding: 8px 24px
@@ -177,17 +187,20 @@ hover:rotate-1
 ## 🎨 Color Palette
 
 ### Yellow (Primary)
+
 - Default: `bg-yellow-400` (#FBBF24)
 - Hover: `bg-yellow-300` (#FCD34D)
 - Text: `text-black`
 
 ### White/Transparent (Secondary/Navigation/Toggle)
+
 - Default: `bg-white/10` (White 10% opacity)
 - Hover: `bg-white` (Solid white)
 - Text: `text-white` → `text-black` on hover
 - Border: `border-white/60` or `border-white/80`
 
 ### Green (Save)
+
 - Default: `bg-green-600/50` (Green 50% opacity)
 - Hover: `bg-green-600` (Solid green)
 - Border: `border-green-500`
@@ -198,6 +211,7 @@ hover:rotate-1
 ## 🔧 Implementation Examples
 
 ### Gallery Button
+
 ```tsx
 <button
     onClick={() => setShowGallery(true)}
@@ -208,6 +222,7 @@ hover:rotate-1
 ```
 
 ### Batch/Single Toggle
+
 ```tsx
 <button
     onClick={() => setIsBatchMode(!isBatchMode)}
@@ -221,6 +236,7 @@ hover:rotate-1
 ```
 
 ### Download Album (Primary)
+
 ```tsx
 <button
     onClick={handleDownloadAlbum}
@@ -232,6 +248,7 @@ hover:rotate-1
 ```
 
 ### Download ZIP (Secondary)
+
 ```tsx
 <button
     onClick={handleDownloadZip}
@@ -247,23 +264,27 @@ hover:rotate-1
 ## 🎯 Design Principles
 
 ### Consistency
+
 - All buttons use `font-permanent-marker` for playful aesthetic
 - All buttons have `transform` and `transition` for smooth animations
 - All buttons scale to 1.05x on hover
 - All buttons have subtle rotation on hover
 
 ### Visual Hierarchy
+
 - **Primary** (Yellow): Most important actions
 - **Secondary** (White/Transparent): Alternative actions
 - **Tertiary** (Green): Special actions (Save)
 
 ### Accessibility
+
 - All buttons have clear hover states
 - All buttons have sufficient contrast
 - All buttons have touch-friendly sizes (min 44px height)
 - Disabled states have reduced opacity
 
 ### Playfulness
+
 - Subtle rotation animations (-2°, -1°, +1°, +2°)
 - Hand-drawn font (Permanent Marker)
 - Box shadows for depth
@@ -274,6 +295,7 @@ hover:rotate-1
 ## 📱 Responsive Behavior
 
 All buttons maintain their styling across breakpoints:
+
 - Desktop: Full size
 - Tablet: Full size
 - Mobile: Full size (touch-friendly)
@@ -285,6 +307,7 @@ No size adjustments needed as base sizes are already touch-friendly.
 ## ✅ Checklist for New Buttons
 
 When adding new buttons, ensure:
+
 - [ ] Uses appropriate button class (primary/secondary/nav/toggle)
 - [ ] Has `font-permanent-marker` font
 - [ ] Has scale animation (1.05x)
@@ -299,4 +322,3 @@ When adding new buttons, ensure:
 
 **Reference Date**: October 22, 2025
 **Status**: ✅ CURRENT
-

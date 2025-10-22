@@ -13,6 +13,7 @@
 ```
 
 **New Element**: Gallery button in top-right corner
+
 - Opens modal to view saved generations
 - Always visible (except during batch processing)
 - Accessible from any app state
@@ -39,6 +40,7 @@
 ```
 
 **New Elements**:
+
 - Mode toggle buttons (Single/Batch)
 - Batch mode allows multiple file selection
 - Single mode works as before
@@ -83,6 +85,7 @@
 ```
 
 **New Component**: BatchUploadProgress
+
 - Shows overall progress percentage
 - Individual file progress bars
 - Status icons: ✓ (done), ✕ (error), ⟳ (processing), ○ (pending)
@@ -109,6 +112,7 @@
 ```
 
 **New Buttons**:
+
 - **Download ZIP**: Creates ZIP with all 6 images
 - **💾 Save**: Saves generation to history (green button)
 - Existing buttons: Download Album, Start Over
@@ -150,6 +154,7 @@
 ```
 
 **Gallery Features**:
+
 - Responsive grid layout (1-3 columns based on screen size)
 - Thumbnail from 1950s image
 - Creation date and filename
@@ -162,6 +167,7 @@
 ## Button Styles
 
 ### Primary Button (Yellow)
+
 ```
 ┌─────────────────────────────────┐
 │  Download Album                 │
@@ -172,6 +178,7 @@ Hover: scale-105, rotate -2°, bg-yellow-300
 ```
 
 ### Secondary Button (White/Transparent)
+
 ```
 ┌─────────────────────────────────┐
 │  Start Over                     │
@@ -183,6 +190,7 @@ Hover: scale-105, rotate 2°, bg-white, text-black
 ```
 
 ### Save Button (Green)
+
 ```
 ┌─────────────────────────────────┐
 │  💾 Save                        │
@@ -194,6 +202,7 @@ Hover: scale-105, bg-green-600
 ```
 
 ### Gallery Button (Neutral)
+
 ```
 ┌─────────────────────────────────┐
 │  📷 Gallery                     │
@@ -208,12 +217,14 @@ Hover: bg-neutral-600
 ## Responsive Behavior
 
 ### Desktop (> 768px)
+
 - Gallery button visible in top-right
 - Buttons in single row
 - Gallery grid: 3 columns
 - Full-size progress bars
 
 ### Mobile (≤ 768px)
+
 - Gallery button visible in top-right
 - Buttons stack vertically
 - Gallery grid: 1-2 columns
@@ -225,16 +236,19 @@ Hover: bg-neutral-600
 ## Animation Details
 
 ### Gallery Modal
+
 - Fade in/out: 0.2s
 - Scale: 0.9 → 1.0
 - Backdrop blur effect
 
 ### Batch Progress
+
 - Slide up: 0.3s
 - Progress bars animate smoothly
 - Status icons fade in
 
 ### Gallery Items
+
 - Hover scale: 1.02
 - Border color transition
 - Smooth opacity changes
@@ -271,6 +285,7 @@ Hover: bg-neutral-600
 ## Summary of Changes
 
 **New UI Elements**:
+
 - Gallery button (navigation)
 - Mode toggle buttons (idle state)
 - Batch progress component
@@ -279,9 +294,9 @@ Hover: bg-neutral-600
 - Save button
 
 **Modified Elements**:
+
 - Results button layout (now 4 buttons)
 - Idle state (added mode toggle)
 
 **Total New Components**: 2 (Gallery, BatchUploadProgress)
 **Total Modified Components**: 2 (App, ImageUploader)
-
