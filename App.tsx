@@ -12,7 +12,7 @@ import Footer from './components/Footer';
 import Gallery from './components/Gallery';
 import { createAlbumPage } from './lib/albumUtils';
 import { validateImage } from './lib/imageValidation';
-import { useImageGeneration, DECADE_PROMPTS } from './hooks/useImageGeneration';
+import { useImageGeneration, GeneratedImage } from './hooks/useImageGeneration';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { saveGeneration, GenerationRecord } from './lib/indexedDBUtils';
 import { createAndDownloadZip } from './lib/zipExportUtils';
@@ -27,6 +27,7 @@ const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6
 
 function AppContent() {
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [isDownloading, setIsDownloading] = useState<boolean>(false);
     const [appState, setAppState] = useState<'idle' | 'image-uploaded' | 'generating' | 'results-shown'>('idle');
     const [showGallery, setShowGallery] = useState(false);
@@ -66,21 +67,22 @@ function AppContent() {
             }
 
             setUploadedImage(validation.dataUrl);
+            setUploadedFile(file);
             setAppState('image-uploaded');
             resetGeneration(); // Clear previous results
         }
     };
 
     const handleGenerateClick = async () => {
-        if (!uploadedImage) return;
+        if (!uploadedImage || !uploadedFile) return;
         setAppState('generating');
-        await generateAll(uploadedImage);
+        await generateAll(uploadedFile);
         setAppState('results-shown');
     };
 
     const handleRegenerateDecade = async (decade: string) => {
-        if (!uploadedImage) return;
-        await regenerateDecade(decade, uploadedImage);
+        if (!uploadedFile) return;
+        await regenerateDecade(decade, uploadedFile);
     };
 
     const handleReset = () => {
@@ -90,6 +92,7 @@ function AppContent() {
         }
 
         setUploadedImage(null);
+        setUploadedFile(null);
         resetGeneration();
         setAppState('idle');
     };
@@ -111,9 +114,9 @@ function AppContent() {
         setIsDownloading(true);
         try {
             const imageData = Object.entries(generatedImages)
-                .filter(([, image]) => image.status === 'done' && image.url)
-                .reduce((acc, [decade, image]) => {
-                    acc[decade] = image!.url!;
+                .filter(([, image]: [string, GeneratedImage]) => image.status === 'done' && image.url)
+                .reduce((acc, [decade, image]: [string, GeneratedImage]) => {
+                    acc[decade] = image.url!;
                     return acc;
                 }, {} as Record<string, string>);
 
@@ -145,9 +148,9 @@ function AppContent() {
         setIsDownloading(true);
         try {
             const imageData = Object.entries(generatedImages)
-                .filter(([, image]) => image.status === 'done' && image.url)
-                .reduce((acc, [decade, image]) => {
-                    acc[decade] = image!.url!;
+                .filter(([, image]: [string, GeneratedImage]) => image.status === 'done' && image.url)
+                .reduce((acc, [decade, image]: [string, GeneratedImage]) => {
+                    acc[decade] = image.url!;
                     return acc;
                 }, {} as Record<string, string>);
 
@@ -170,9 +173,9 @@ function AppContent() {
     const saveToHistory = async () => {
         try {
             const imageData = Object.entries(generatedImages)
-                .filter(([, image]) => image.status === 'done' && image.url)
-                .reduce((acc, [decade, image]) => {
-                    acc[decade] = image!.url!;
+                .filter(([, image]: [string, GeneratedImage]) => image.status === 'done' && image.url)
+                .reduce((acc, [decade, image]: [string, GeneratedImage]) => {
+                    acc[decade] = image.url!;
                     return acc;
                 }, {} as Record<string, string>);
 
@@ -243,13 +246,13 @@ function AppContent() {
             setAppState('generating');
 
             // Generate all decades using the same hook as single mode
-            await generateAll(validation.dataUrl);
+            await generateAll(file);
 
             // Auto-save to history
             const imageData = Object.entries(generatedImages)
-                .filter(([, image]) => image.status === 'done' && image.url)
-                .reduce((acc, [decade, image]) => {
-                    acc[decade] = image!.url!;
+                .filter(([, image]: [string, GeneratedImage]) => image.status === 'done' && image.url)
+                .reduce((acc, [decade, image]: [string, GeneratedImage]) => {
+                    acc[decade] = image.url!;
                     return acc;
                 }, {} as Record<string, string>);
 

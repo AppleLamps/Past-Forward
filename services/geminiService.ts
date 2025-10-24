@@ -12,8 +12,143 @@ if (!OPENROUTER_API_KEY) {
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash-image";
 
+// Variation arrays for dynamic prompt generation
+const POSE_VARIATIONS = [
+    "formal pose",
+    "casual pose",
+    "candid pose",
+    "studio pose",
+    "confident pose",
+    "relaxed pose",
+    "dramatic pose",
+    "playful pose",
+    "elegant pose",
+    "natural pose"
+];
+
+const LIGHTING_VARIATIONS = [
+    "natural lighting",
+    "studio lighting",
+    "soft focus lighting",
+    "flash photography",
+    "golden hour lighting",
+    "harsh lighting",
+    "even lighting",
+    "backlit",
+    "side-lit",
+    "rim lighting",
+    "moonlight",
+    "neon lighting",
+    "candlelight"
+];
+
+const ACCESSORY_VARIATIONS = [
+    "with subtle props",
+    "with era-appropriate accessories",
+    "minimalist setup",
+    "vintage backdrop",
+    "with period jewelry",
+    "with hats",
+    "with glasses",
+    "with hand props",
+    "with vintage furniture",
+    "with outdoor elements",
+    "with musical instruments",
+    "with books",
+    "with vehicles"
+];
+
+// Decade-specific prompts for more authentic and detailed image generation.
+export const DECADE_PROMPTS: Record<string, string> = {
+    '1950s': `Transform this person into a 1950s portrait photograph. Style: Post-war American aesthetic with high-contrast black and white or early Kodachrome color. Fashion: Men in fedoras, suits with wide lapels, slicked hair; Women in circle skirts, victory rolls, cat-eye glasses. Photography: Grainy film texture, studio lighting, formal pose. Maintain the person's facial features and identity exactly.`,
+
+    '1960s': `Transform this person into a 1960s portrait photograph. Style: Mod era with vibrant colors or high-contrast B&W. Fashion: Men in slim suits, Beatles haircuts; Women in shift dresses, bouffant hair, bold eyeliner. Photography: Kodak Instamatic quality, natural lighting, candid pose. Preserve the person's exact facial features and likeness.`,
+
+    '1970s': `Transform this person into a 1970s portrait photograph. Style: Warm, faded colors with orange/brown tones. Fashion: Men in wide collars, bell-bottoms, long hair/sideburns; Women in platform shoes, maxi dresses, feathered hair. Photography: Polaroid or 35mm film grain, soft focus, casual pose. Keep the person's face identical.`,
+
+    '1980s': `Transform this person into a 1980s portrait photograph. Style: Bright, saturated colors with high contrast. Fashion: Men in power suits, mullets; Women in shoulder pads, big hair, bold makeup. Photography: Flash photography look, sharp focus, studio backdrop. Maintain exact facial features and identity.`,
+
+    '1990s': `Transform this person into a 1990s portrait photograph. Style: Slightly desaturated colors or grunge aesthetic. Fashion: Men in baggy jeans, flannel, curtain hair; Women in chokers, slip dresses, straight hair. Photography: Disposable camera or early digital quality, casual lighting. Preserve the person's facial likeness exactly.`,
+
+    '2000s': `Transform this person into a 2000s portrait photograph. Style: Early digital camera aesthetic with slight overexposure. Fashion: Men in popped collars, frosted tips; Women in low-rise jeans, butterfly clips, thin eyebrows. Photography: Digital camera quality, flash, MySpace-style pose. Keep the person's face and features identical.`
+};
+
 
 // --- Helper Functions ---
+
+/**
+ * Converts a File to a data URL string.
+ * @param file The File to convert.
+ * @returns A promise that resolves to the data URL string.
+ */
+const fileToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
+/**
+ * Analyzes the input image to extract description and suggest adaptations for dynamic prompt generation.
+ * @param imageFile The File of the image to analyze.
+ * @returns A promise that resolves to an object with description and adaptation.
+ */
+export const analyzeImage = async (imageFile: File): Promise<{ description: string; adaptation: string }> => {
+    const formData = new FormData();
+    formData.append('model', 'openrouter/andromeda-alpha');
+    formData.append('messages', JSON.stringify([
+        {
+            role: 'user',
+            content: [
+                { type: 'text', text: `Analyze this image and return a JSON object exactly like this format: {"description": "brief detailed description of the person, clothing, pose, expression, background", "adaptation": "suggest specific changes to setting, hair, facial hair, clothing, or other elements to match a vintage photo style, while keeping the person's facial features and identity identical"}. Be creative but ensure the core likeness is preserved.` },
+                { type: 'image_url', image_url: { url: await fileToDataURL(imageFile) } }
+            ]
+        }
+    ]));
+
+    const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin, // Optional: for app attribution
+            'X-Title': 'Past Forward', // Optional: for app attribution
+        },
+        body: JSON.stringify({
+            model: 'openrouter/andromeda-alpha',
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: `Analyze this image and return a JSON object exactly like this format: {"description": "brief detailed description of the person, clothing, pose, expression, background", "adaptation": "suggest specific changes to setting, hair, facial hair, clothing, or other elements to match a vintage photo style, while keeping the person's facial features and identity identical"}. Be creative but ensure the core likeness is preserved.` },
+                        { type: 'image_url', image_url: { url: await fileToDataURL(imageFile) } }
+                    ]
+                }
+            ],
+        }),
+    });
+
+    if (!response.ok) throw new Error(`Analysis failed: ${response.statusText}`);
+    const data = await response.json();
+    const message = data.choices?.[0]?.message;
+    const content = message?.content || '{}';
+
+    try {
+        const parsed = JSON.parse(content);
+        return {
+            description: parsed.description || 'A person in a photo.',
+            adaptation: parsed.adaptation || 'Adapt clothing and style to the era while preserving facial features.'
+        };
+    } catch {
+        // Fallback to random if JSON invalid
+        return {
+            description: content,
+            adaptation: 'Adapt clothing and style to the era while preserving facial features.'
+        };
+    }
+};
 
 /**
  * Creates a fallback prompt to use when the primary one is blocked.
@@ -221,50 +356,51 @@ async function callOpenRouterWithRetry(imageDataUrl: string, prompt: string): Pr
 
 
 /**
- * Generates a decade-styled image from a source image and a prompt.
- * It includes a fallback mechanism for prompts that might be blocked in certain regions.
- * @param imageDataUrl A data URL string of the source image (e.g., 'data:image/png;base64,...').
- * @param prompt The prompt to guide the image generation.
+ * Generates a decade-styled image from a source image file and decade.
+ * Performs image analysis to create dynamic prompts, with fallback mechanisms.
+ * @param imageFile The File of the source image.
+ * @param decade The decade string (e.g., "1950s").
  * @returns A promise that resolves to a Blob URL of the generated image.
  */
-export async function generateDecadeImage(imageDataUrl: string, prompt: string): Promise<string> {
-    const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
-    if (!match) {
-        throw new Error("Invalid image data URL format. Expected 'data:image/...;base64,...'");
-    }
-
-    // --- First attempt with the original prompt ---
+export async function generateDecadeImage(imageFile: File, decade: string): Promise<string> {
     try {
-        console.log("Attempting generation with original prompt via OpenRouter...");
-        const response = await callOpenRouterWithRetry(imageDataUrl, prompt);
-        return processOpenRouterResponse(response);
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-        const isNoImageError = errorMessage.includes("The AI model responded with text instead of an image");
+        const analysis = await analyzeImage(imageFile);
+        const basePrompt = DECADE_PROMPTS[decade];
+        const dynamicPrompt = `Transform this ${analysis.description} into a ${decade} portrait photograph. ${basePrompt} ${analysis.adaptation}`;
 
-        if (isNoImageError) {
-            console.warn("Original prompt was likely blocked. Trying a fallback prompt.");
-            const decade = extractDecade(prompt);
-            if (!decade) {
-                console.error("Could not extract decade from prompt, cannot use fallback.");
-                throw error; // Re-throw the original "no image" error.
-            }
+        // Convert file to data URL for generation
+        const imageDataUrl = await fileToDataURL(imageFile);
 
-            // --- Second attempt with the fallback prompt ---
-            try {
-                const fallbackPrompt = getFallbackPrompt(decade);
-                console.log(`Attempting generation with fallback prompt for ${decade}...`);
-                const fallbackResponse = await callOpenRouterWithRetry(imageDataUrl, fallbackPrompt);
-                return processOpenRouterResponse(fallbackResponse);
-            } catch (fallbackError) {
-                console.error("Fallback prompt also failed.", fallbackError);
-                const finalErrorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-                throw new Error(`The AI model failed with both original and fallback prompts. Last error: ${finalErrorMessage}`);
-            }
-        } else {
-            // This is for other errors, like a final internal server error after retries.
-            console.error("An unrecoverable error occurred during image generation.", error);
-            throw new Error(`The AI model failed to generate an image. Details: ${errorMessage}`);
+        // First attempt with dynamic prompt
+        try {
+            console.log("Attempting generation with dynamic prompt via OpenRouter...");
+            const response = await callOpenRouterWithRetry(imageDataUrl, dynamicPrompt);
+            return processOpenRouterResponse(response);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+            console.log(`Dynamic prompt failed: ${errorMessage}. Using fallback prompt...`);
+            const fallbackPrompt = getFallbackPrompt(decade);
+            const fallbackResponse = await callOpenRouterWithRetry(imageDataUrl, fallbackPrompt);
+            return processOpenRouterResponse(fallbackResponse);
+        }
+    } catch (analysisError) {
+        console.log("Analysis failed, falling back to random selections.");
+        // Fallback without analysis
+        const basePrompt = DECADE_PROMPTS[decade];
+        const randomPose = POSE_VARIATIONS[Math.floor(Math.random() * POSE_VARIATIONS.length)];
+        const randomLighting = LIGHTING_VARIATIONS[Math.floor(Math.random() * LIGHTING_VARIATIONS.length)];
+        const randomAccessory = ACCESSORY_VARIATIONS[Math.floor(Math.random() * ACCESSORY_VARIATIONS.length)];
+        const dynamicPrompt = `${basePrompt} Incorporate ${randomPose}, ${randomLighting}, and ${randomAccessory}.`;
+
+        const imageDataUrl = await fileToDataURL(imageFile);
+
+        try {
+            const response = await callOpenRouterWithRetry(imageDataUrl, dynamicPrompt);
+            return processOpenRouterResponse(response);
+        } catch (error) {
+            const fallbackPrompt = getFallbackPrompt(decade);
+            const fallbackResponse = await callOpenRouterWithRetry(imageDataUrl, fallbackPrompt);
+            return processOpenRouterResponse(fallbackResponse);
         }
     }
 }
