@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { useState, useCallback } from 'react';
-import { generateDecadeImage, DECADE_PROMPTS } from '../services/geminiService';
+import { generateDecadeImage, generateCustomImage, DECADE_PROMPTS } from '../services/geminiService';
 
 export type ImageStatus = 'pending' | 'done' | 'error';
 
@@ -105,6 +105,86 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
         }
     }, [generatedImages, onError, onSuccess]);
 
+    const regenerateCustom = useCallback(async (label: string, uploadedFile: File, customPrompt: string) => {
+        if (!uploadedFile) return;
+
+        if (generatedImages[label]?.status === 'pending') {
+            return;
+        }
+
+        console.log(`Regenerating custom image for ${label}...`);
+
+        setGeneratedImages(prev => ({
+            ...prev,
+            [label]: { status: 'pending' },
+        }));
+
+        try {
+            const resultUrl = await generateCustomImage(uploadedFile, customPrompt);
+
+            setGeneratedImages(prev => ({
+                ...prev,
+                [label]: { status: 'done', url: resultUrl },
+            }));
+
+            onSuccess?.(label, resultUrl);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            setGeneratedImages(prev => ({
+                ...prev,
+                [label]: { status: 'error', error: errorMessage },
+            }));
+            console.error(`Failed to regenerate custom image for ${label}:`, err);
+            onError?.(label, errorMessage);
+        }
+    }, [generatedImages, onError, onSuccess]);
+
+    const generateCustomAll = useCallback(async (uploadedFile: File, customPrompt: string, count: number = 6) => {
+        setIsLoading(true);
+
+        const customLabels = Array.from({ length: count }, (_, i) => `Version ${i + 1}`);
+        const initialImages: Record<string, GeneratedImage> = {};
+        customLabels.forEach(label => {
+            initialImages[label] = { status: 'pending' };
+        });
+        setGeneratedImages(initialImages);
+
+        const labelsQueue = [...customLabels];
+
+        const processCustom = async (label: string) => {
+            try {
+                const resultUrl = await generateCustomImage(uploadedFile, customPrompt);
+
+                setGeneratedImages(prev => ({
+                    ...prev,
+                    [label]: { status: 'done', url: resultUrl },
+                }));
+
+                onSuccess?.(label, resultUrl);
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                setGeneratedImages(prev => ({
+                    ...prev,
+                    [label]: { status: 'error', error: errorMessage },
+                }));
+                console.error(`Failed to generate custom image for ${label}:`, err);
+                onError?.(label, errorMessage);
+            }
+        };
+
+        const workers = Array(concurrencyLimit).fill(null).map(async () => {
+            while (labelsQueue.length > 0) {
+                const label = labelsQueue.shift();
+                if (label) {
+                    await processCustom(label);
+                }
+            }
+        });
+
+        await Promise.all(workers);
+        setIsLoading(false);
+    }, [concurrencyLimit, onError, onSuccess]);
+
     const reset = useCallback(() => {
         // Clean up Blob URLs to prevent memory leaks
         Object.values(generatedImages).forEach((image: GeneratedImage) => {
@@ -119,7 +199,9 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
         generatedImages,
         isLoading,
         generateAll,
+        generateCustomAll,
         regenerateDecade,
+        regenerateCustom,
         reset,
     };
 }

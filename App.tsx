@@ -8,6 +8,7 @@ import { ToastProvider, useToast } from './components/Toast';
 import ImageUploader from './components/ImageUploader';
 import ImagePreview from './components/ImagePreview';
 import GenerationGrid from './components/GenerationGrid';
+import ImageLightbox from './components/ImageLightbox';
 import Footer from './components/Footer';
 import Gallery from './components/Gallery';
 import { createAlbumPage } from './lib/albumUtils';
@@ -16,6 +17,7 @@ import { useImageGeneration, GeneratedImage } from './hooks/useImageGeneration';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { saveGeneration, GenerationRecord } from './lib/indexedDBUtils';
 import { createAndDownloadZip } from './lib/zipExportUtils';
+import { generateCustomImage } from './services/geminiService';
 
 const DECADES = ['1950s', '1960s', '1970s', '1980s', '1990s', '2000s'];
 
@@ -29,10 +31,13 @@ function AppContent() {
     const [isDownloading, setIsDownloading] = useState<boolean>(false);
     const [appState, setAppState] = useState<'idle' | 'image-uploaded' | 'generating' | 'results-shown'>('idle');
     const [showGallery, setShowGallery] = useState(false);
+    const [activeLabels, setActiveLabels] = useState<string[]>(DECADES);
+    const [generationMode, setGenerationMode] = useState<'decades' | 'custom'>('decades');
+    const [currentCustomPrompt, setCurrentCustomPrompt] = useState<string>('');
     const isMobile = useMediaQuery('(max-width: 768px)');
     const { showToast } = useToast();
 
-    const { generatedImages, isLoading, generateAll, regenerateDecade, reset: resetGeneration } = useImageGeneration({
+    const { generatedImages, isLoading, generateAll, generateCustomAll, regenerateDecade, regenerateCustom, reset: resetGeneration } = useImageGeneration({
         decades: DECADES,
         concurrencyLimit: DECADES.length,
         onError: (decade, error) => {
@@ -70,14 +75,31 @@ function AppContent() {
 
     const handleGenerateClick = async () => {
         if (!uploadedImage || !uploadedFile) return;
+        setActiveLabels(DECADES);
+        setGenerationMode('decades');
         setAppState('generating');
         await generateAll(uploadedFile);
         setAppState('results-shown');
     };
 
-    const handleRegenerateDecade = async (decade: string) => {
+    const handleGenerateCustom = async (prompt: string) => {
         if (!uploadedFile) return;
-        await regenerateDecade(decade, uploadedFile);
+        setCurrentCustomPrompt(prompt);
+        const customLabels = ['Version 1', 'Version 2', 'Version 3', 'Version 4', 'Version 5', 'Version 6'];
+        setActiveLabels(customLabels);
+        setGenerationMode('custom');
+        setAppState('generating');
+        await generateCustomAll(uploadedFile, prompt, 6);
+        setAppState('results-shown');
+    };
+
+    const handleRegenerateDecade = async (label: string) => {
+        if (!uploadedFile) return;
+        if (generationMode === 'custom') {
+            await regenerateCustom(label, uploadedFile, currentCustomPrompt);
+        } else {
+            await regenerateDecade(label, uploadedFile);
+        }
     };
 
     const handleReset = () => {
@@ -89,6 +111,8 @@ function AppContent() {
         setUploadedImage(null);
         setUploadedFile(null);
         resetGeneration();
+        setActiveLabels(DECADES);
+        setGenerationMode('decades');
         setAppState('idle');
     };
 
@@ -115,7 +139,8 @@ function AppContent() {
                     return acc;
                 }, {} as Record<string, string>);
 
-            if (Object.keys(imageData).length < DECADES.length) {
+            const expectedCount = generationMode === 'decades' ? DECADES.length : 6;
+            if (Object.keys(imageData).length < expectedCount) {
                 showToast("Please wait for all images to finish generating before downloading the album.", 'warning');
                 return;
             }
@@ -149,7 +174,8 @@ function AppContent() {
                     return acc;
                 }, {} as Record<string, string>);
 
-            if (Object.keys(imageData).length < DECADES.length) {
+            const expectedCount = generationMode === 'decades' ? DECADES.length : 6;
+            if (Object.keys(imageData).length < expectedCount) {
                 showToast("Please wait for all images to finish generating before downloading.", 'warning');
                 return;
             }
@@ -174,7 +200,8 @@ function AppContent() {
                     return acc;
                 }, {} as Record<string, string>);
 
-            if (Object.keys(imageData).length < DECADES.length) {
+            const expectedCount = generationMode === 'decades' ? DECADES.length : 6;
+            if (Object.keys(imageData).length < expectedCount) {
                 showToast("Please wait for all images to finish generating.", 'warning');
                 return;
             }
@@ -222,7 +249,9 @@ function AppContent() {
                 <div className="text-center mb-10">
                     <h1 className="text-6xl md:text-8xl font-caveat font-bold text-neutral-100">Past Forward</h1>
                     <p className="font-permanent-marker text-neutral-300 mt-2 text-xl tracking-wide">
-                        {isLoading ? 'Generating across the decades...' : 'Generate yourself through the decades.'}
+                        {isLoading 
+                            ? (generationMode === 'custom' ? 'Generating custom variations...' : 'Generating across the decades...') 
+                            : 'Generate yourself through the decades.'}
                     </p>
                 </div>
 
@@ -239,13 +268,14 @@ function AppContent() {
                         imageUrl={uploadedImage}
                         onGenerate={handleGenerateClick}
                         onReset={handleReset}
+                        onGenerateCustom={handleGenerateCustom}
                     />
                 )}
 
                 {(appState === 'generating' || appState === 'results-shown') && (
                     <>
                         <GenerationGrid
-                            decades={DECADES}
+                            decades={activeLabels}
                             generatedImages={generatedImages}
                             isMobile={isMobile}
                             onShake={handleRegenerateDecade}

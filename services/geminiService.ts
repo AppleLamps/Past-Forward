@@ -409,3 +409,37 @@ export async function generateDecadeImage(imageFile: File, decade: string): Prom
         }
     }
 }
+
+export async function generateCustomImage(imageFile: File, userPrompt: string): Promise<string> {
+    try {
+        const analysis = await analyzeImage(imageFile);
+        const randomPose = POSE_VARIATIONS[Math.floor(Math.random() * POSE_VARIATIONS.length)];
+        const randomLighting = LIGHTING_VARIATIONS[Math.floor(Math.random() * LIGHTING_VARIATIONS.length)];
+        const randomAccessory = ACCESSORY_VARIATIONS[Math.floor(Math.random() * ACCESSORY_VARIATIONS.length)];
+
+        const dynamicPrompt = `Create a photorealistic image of this person that reflects: ${userPrompt}. Based on the uploaded photo: ${analysis.description}. Apply: ${analysis.adaptation}. Preserve the person's exact facial identity and biometric likeness (eyes, nose, mouth, bone structure). You may strongly change hairstyle, facial hair, makeup, accessories (including piercings and tattoos), wardrobe, background, and composition to achieve the requested style. Incorporate ${randomPose}, ${randomLighting}, and ${randomAccessory}. Output a single photorealistic image.`;
+
+        const imageDataUrl = await fileToDataURL(imageFile);
+
+        try {
+            const response = await callOpenRouterWithRetry(imageDataUrl, dynamicPrompt);
+            return processOpenRouterResponse(response);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+            console.log(`Custom prompt failed: ${errorMessage}. Using simplified prompt...`);
+            const fallbackPrompt = `Create a photorealistic photograph of the person in this image styled as: ${userPrompt}. Ensure identity is clearly preserved while adapting styling to match the request.`;
+            const response = await callOpenRouterWithRetry(imageDataUrl, fallbackPrompt);
+            return processOpenRouterResponse(response);
+        }
+    } catch (analysisError) {
+        console.log("Custom analysis failed, proceeding without analysis.");
+        const randomPose = POSE_VARIATIONS[Math.floor(Math.random() * POSE_VARIATIONS.length)];
+        const randomLighting = LIGHTING_VARIATIONS[Math.floor(Math.random() * LIGHTING_VARIATIONS.length)];
+        const randomAccessory = ACCESSORY_VARIATIONS[Math.floor(Math.random() * ACCESSORY_VARIATIONS.length)];
+
+        const dynamicPrompt = `Create a photorealistic image of this person that reflects: ${userPrompt}. Preserve the person's facial identity. Incorporate ${randomPose}, ${randomLighting}, and ${randomAccessory}.`;
+        const imageDataUrl = await fileToDataURL(imageFile);
+        const response = await callOpenRouterWithRetry(imageDataUrl, dynamicPrompt);
+        return processOpenRouterResponse(response);
+    }
+}
