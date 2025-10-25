@@ -83,6 +83,15 @@ export function getRandomVariations() {
 }
 
 /**
+ * Sanitizes user-provided prompt input to prevent prompt injection attacks.
+ * @param input The raw user prompt string.
+ * @returns The sanitized prompt string.
+ */
+export function sanitizePrompt(input: string): string {
+    return input.replace(/[\n\r\t]/g, ' ').trim();
+}
+
+/**
  * Creates a fallback prompt to use when the primary one is blocked.
  * @param decade The decade string (e.g., "1950s").
  * @returns The fallback prompt string.

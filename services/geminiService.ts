@@ -6,7 +6,7 @@
 import { fileToDataURL } from '../lib/fileUtils';
 import { generateImage, analyzeImageAPI } from './openRouterClient';
 import { parseImageResponse, parseAnalysisResponse } from './responseParser';
-import { DECADE_PROMPTS, getRandomVariations, getFallbackPrompt } from './prompts';
+import { DECADE_PROMPTS, getRandomVariations, getFallbackPrompt, sanitizePrompt } from './prompts';
 
 // Re-export for backward compatibility
 export { DECADE_PROMPTS };
@@ -73,13 +73,14 @@ export async function generateDecadeImage(imageFile: File, decade: string): Prom
 }
 
 export async function generateCustomImage(imageFile: File, userPrompt: string): Promise<string> {
+    const sanitizedPrompt = sanitizePrompt(userPrompt);
     const imageDataUrl = await fileToDataURL(imageFile);
     
     try {
         const analysis = await analyzeImage(imageFile);
         const { pose, lighting, accessory } = getRandomVariations();
 
-        const dynamicPrompt = `Create a photorealistic image of this person that reflects: ${userPrompt}. Based on the uploaded photo: ${analysis.description}. Apply: ${analysis.adaptation}. Preserve the person's exact facial identity and biometric likeness (eyes, nose, mouth, bone structure). You may strongly change hairstyle, facial hair, makeup, accessories (including piercings and tattoos), wardrobe, background, and composition to achieve the requested style. Incorporate ${pose}, ${lighting}, and ${accessory}. Output a single photorealistic image.`;
+        const dynamicPrompt = `Create a photorealistic image of this person that reflects: ${sanitizedPrompt}. Based on the uploaded photo: ${analysis.description}. Apply: ${analysis.adaptation}. Preserve the person's exact facial identity and biometric likeness (eyes, nose, mouth, bone structure). You may strongly change hairstyle, facial hair, makeup, accessories (including piercings and tattoos), wardrobe, background, and composition to achieve the requested style. Incorporate ${pose}, ${lighting}, and ${accessory}. Output a single photorealistic image.`;
 
         try {
             const response = await generateImage(imageDataUrl, dynamicPrompt);
@@ -87,7 +88,7 @@ export async function generateCustomImage(imageFile: File, userPrompt: string): 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
             console.log(`Custom prompt failed: ${errorMessage}. Using simplified prompt...`);
-            const fallbackPrompt = `Create a photorealistic photograph of the person in this image styled as: ${userPrompt}. Ensure identity is clearly preserved while adapting styling to match the request.`;
+            const fallbackPrompt = `Create a photorealistic photograph of the person in this image styled as: ${sanitizedPrompt}. Ensure identity is clearly preserved while adapting styling to match the request.`;
             const response = await generateImage(imageDataUrl, fallbackPrompt);
             return parseImageResponse(response);
         }
@@ -95,7 +96,7 @@ export async function generateCustomImage(imageFile: File, userPrompt: string): 
         console.log("Custom analysis failed, proceeding without analysis.");
         const { pose, lighting, accessory } = getRandomVariations();
 
-        const dynamicPrompt = `Create a photorealistic image of this person that reflects: ${userPrompt}. Preserve the person's facial identity. Incorporate ${pose}, ${lighting}, and ${accessory}.`;
+        const dynamicPrompt = `Create a photorealistic image of this person that reflects: ${sanitizedPrompt}. Preserve the person's facial identity. Incorporate ${pose}, ${lighting}, and ${accessory}.`;
         const response = await generateImage(imageDataUrl, dynamicPrompt);
         return parseImageResponse(response);
     }
