@@ -18,6 +18,7 @@ import { useMediaQuery } from './hooks/useMediaQuery';
 import { saveGeneration, GenerationRecord } from './lib/indexedDBUtils';
 import { createAndDownloadZip } from './lib/zipExportUtils';
 import { generateCustomImage } from './services/geminiService';
+import { revokeBlobUrl } from './lib/blobUtils';
 
 const DECADES = ['1950s', '1960s', '1970s', '1980s', '1990s', '2000s'];
 
@@ -62,9 +63,7 @@ function AppContent() {
 
         if (validation.dataUrl) {
             // Clean up previous uploaded image if it was a Blob URL
-            if (uploadedImage && uploadedImage.startsWith('blob:')) {
-                URL.revokeObjectURL(uploadedImage);
-            }
+            revokeBlobUrl(uploadedImage);
 
             setUploadedImage(validation.dataUrl);
             setUploadedFile(file);
@@ -104,9 +103,7 @@ function AppContent() {
 
     const handleReset = () => {
         // Clean up Blob URLs
-        if (uploadedImage && uploadedImage.startsWith('blob:')) {
-            URL.revokeObjectURL(uploadedImage);
-        }
+        revokeBlobUrl(uploadedImage);
 
         setUploadedImage(null);
         setUploadedFile(null);

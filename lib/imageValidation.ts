@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import { fileToDataURL } from './fileUtils';
+
 export interface ImageValidationResult {
     valid: boolean;
     error?: string;
@@ -54,7 +56,7 @@ export async function validateImage(
 
     // Load image to check dimensions
     try {
-        const dataUrl = await readFileAsDataURL(file);
+        const dataUrl = await fileToDataURL(file);
         const dimensions = await getImageDimensions(dataUrl);
 
         if (dimensions.width > opts.maxWidth || dimensions.height > opts.maxHeight) {
@@ -74,18 +76,6 @@ export async function validateImage(
             error: error instanceof Error ? error.message : 'Failed to load image',
         };
     }
-}
-
-/**
- * Reads a file as a data URL
- */
-function readFileAsDataURL(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-    });
 }
 
 /**

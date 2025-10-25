@@ -3,19 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-/**
- * Converts a Blob URL to a data URL for canvas operations
- */
-async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
-    const response = await fetch(blobUrl);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
+import { blobUrlToDataUrl } from './fileUtils';
 
 // Helper function to load an image and return it as an HTMLImageElement
 async function loadImage(src: string): Promise<HTMLImageElement> {

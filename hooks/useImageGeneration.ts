@@ -4,6 +4,7 @@
 */
 import { useState, useCallback } from 'react';
 import { generateDecadeImage, generateCustomImage, DECADE_PROMPTS } from '../services/geminiService';
+import { revokeBlobUrls } from '../lib/blobUtils';
 
 export type ImageStatus = 'pending' | 'done' | 'error';
 
@@ -80,6 +81,9 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
 
         console.log(`Regenerating image for ${decade}...`);
 
+        // Clean up old blob URL before regenerating
+        revokeBlobUrls([generatedImages[decade]?.url]);
+
         setGeneratedImages(prev => ({
             ...prev,
             [decade]: { status: 'pending' },
@@ -113,6 +117,9 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
         }
 
         console.log(`Regenerating custom image for ${label}...`);
+
+        // Clean up old blob URL before regenerating
+        revokeBlobUrls([generatedImages[label]?.url]);
 
         setGeneratedImages(prev => ({
             ...prev,
@@ -187,11 +194,8 @@ export function useImageGeneration(options: UseImageGenerationOptions) {
 
     const reset = useCallback(() => {
         // Clean up Blob URLs to prevent memory leaks
-        Object.values(generatedImages).forEach((image: GeneratedImage) => {
-            if (image.url && image.url.startsWith('blob:')) {
-                URL.revokeObjectURL(image.url);
-            }
-        });
+        const urls = Object.values(generatedImages).map((image: GeneratedImage) => image.url);
+        revokeBlobUrls(urls);
         setGeneratedImages({});
     }, [generatedImages]);
 
