@@ -16,14 +16,12 @@ import { useImageGeneration, GeneratedImage } from './hooks/useImageGeneration';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { saveGeneration, GenerationRecord } from './lib/indexedDBUtils';
 import { createAndDownloadZip } from './lib/zipExportUtils';
-import { generateDecadeImage } from './services/geminiService';
 
 const DECADES = ['1950s', '1960s', '1970s', '1980s', '1990s', '2000s'];
 
 const primaryButtonClasses = "font-permanent-marker text-xl text-center text-black bg-yellow-400 py-3 px-8 rounded-sm transform transition-transform duration-200 hover:scale-105 hover:-rotate-2 hover:bg-yellow-300 shadow-[2px_2px_0px_2px_rgba(0,0,0,0.2)]";
 const secondaryButtonClasses = "font-permanent-marker text-xl text-center text-white bg-white/10 backdrop-blur-sm border-2 border-white/80 py-3 px-8 rounded-sm transform transition-transform duration-200 hover:scale-105 hover:rotate-2 hover:bg-white hover:text-black";
 const navButtonClasses = "font-permanent-marker text-lg text-center text-white bg-white/10 backdrop-blur-sm border-2 border-white/60 py-2 px-6 rounded-sm transform transition-all duration-200 hover:scale-105 hover:rotate-1 hover:bg-white hover:text-black shadow-[2px_2px_0px_1px_rgba(255,255,255,0.1)]";
-const toggleButtonClasses = "font-permanent-marker text-lg text-center py-2 px-6 rounded-sm transform transition-all duration-200 hover:scale-105 shadow-[2px_2px_0px_1px_rgba(0,0,0,0.2)]";
 
 function AppContent() {
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -31,15 +29,12 @@ function AppContent() {
     const [isDownloading, setIsDownloading] = useState<boolean>(false);
     const [appState, setAppState] = useState<'idle' | 'image-uploaded' | 'generating' | 'results-shown'>('idle');
     const [showGallery, setShowGallery] = useState(false);
-    const [isBatchMode, setIsBatchMode] = useState(false);
-    const [batchQueue, setBatchQueue] = useState<File[]>([]);
-    const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
     const isMobile = useMediaQuery('(max-width: 768px)');
     const { showToast } = useToast();
 
     const { generatedImages, isLoading, generateAll, regenerateDecade, reset: resetGeneration } = useImageGeneration({
         decades: DECADES,
-        concurrencyLimit: 2,
+        concurrencyLimit: DECADES.length,
         onError: (decade, error) => {
             showToast(`Failed to generate ${decade}: ${error}`, 'error');
         },
@@ -209,96 +204,6 @@ function AppContent() {
         showToast("Generation loaded from history!", 'success', 2000);
     };
 
-    const handleBatchUpload = async (files: File[]) => {
-        if (files.length === 0) return;
-
-        setBatchQueue(files);
-        setCurrentBatchIndex(0);
-
-        // Process the first file
-        await processBatchFile(files[0], 0, files.length);
-    };
-
-    const processBatchFile = async (file: File, index: number, total: number) => {
-        try {
-            // Validate image
-            const validation = await validateImage(file, {
-                maxSizeMB: 5,
-                maxWidth: 4096,
-                maxHeight: 4096,
-            });
-
-            if (!validation.valid) {
-                showToast(validation.error || 'Invalid image', 'error');
-                // Move to next file
-                await processNextBatchFile(index, total);
-                return;
-            }
-
-            if (!validation.dataUrl) {
-                showToast('Failed to process image', 'error');
-                await processNextBatchFile(index, total);
-                return;
-            }
-
-            // Set the image and start generation (same as single mode)
-            setUploadedImage(validation.dataUrl);
-            setAppState('generating');
-
-            // Generate all decades using the same hook as single mode
-            await generateAll(file);
-
-            // Auto-save to history
-            const imageData = Object.entries(generatedImages)
-                .filter(([, image]: [string, GeneratedImage]) => image.status === 'done' && image.url)
-                .reduce((acc, [decade, image]: [string, GeneratedImage]) => {
-                    acc[decade] = image.url!;
-                    return acc;
-                }, {} as Record<string, string>);
-
-            const record: GenerationRecord = {
-                id: `gen-${Date.now()}-${index}`,
-                timestamp: Date.now(),
-                originalImageUrl: validation.dataUrl,
-                generatedImages: imageData,
-                metadata: {
-                    fileName: file.name,
-                },
-            };
-
-            await saveGeneration(record);
-
-            showToast(`Completed ${index + 1}/${total}: ${file.name}`, 'success', 2000);
-            setAppState('results-shown');
-
-            // Move to next file after a brief delay
-            await processNextBatchFile(index, total);
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            showToast(`Error processing ${file.name}: ${errorMessage}`, 'error');
-            await processNextBatchFile(index, total);
-        }
-    };
-
-    const processNextBatchFile = async (currentIndex: number, total: number) => {
-        const nextIndex = currentIndex + 1;
-
-        if (nextIndex < total && nextIndex < batchQueue.length) {
-            // Wait a bit before processing next file
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setCurrentBatchIndex(nextIndex);
-            await processBatchFile(batchQueue[nextIndex], nextIndex, total);
-        } else {
-            // Batch complete
-            showToast(`Batch complete! Processed ${total} image${total > 1 ? 's' : ''}.`, 'success');
-            setBatchQueue([]);
-            setCurrentBatchIndex(0);
-            setIsBatchMode(false);
-            handleReset();
-        }
-    };
-
     return (
         <main className="bg-black text-neutral-200 min-h-screen w-full flex flex-col items-center justify-center p-4 pb-24 overflow-hidden relative">
             <div className="absolute top-0 left-0 w-full h-full bg-grid-white/[0.05]"></div>
@@ -317,9 +222,7 @@ function AppContent() {
                 <div className="text-center mb-10">
                     <h1 className="text-6xl md:text-8xl font-caveat font-bold text-neutral-100">Past Forward</h1>
                     <p className="font-permanent-marker text-neutral-300 mt-2 text-xl tracking-wide">
-                        {batchQueue.length > 0
-                            ? `Batch Mode: Processing ${currentBatchIndex + 1} of ${batchQueue.length}`
-                            : 'Generate yourself through the decades.'}
+                        {isLoading ? 'Generating across the decades...' : 'Generate yourself through the decades.'}
                     </p>
                 </div>
 
@@ -327,20 +230,7 @@ function AppContent() {
                     <>
                         <ImageUploader
                             onImageSelect={handleImageSelect}
-                            onBatchSelect={handleBatchUpload}
-                            isBatchMode={isBatchMode}
                         />
-                        <div className="mt-8 flex gap-4">
-                            <button
-                                onClick={() => setIsBatchMode(!isBatchMode)}
-                                className={`${toggleButtonClasses} ${isBatchMode
-                                    ? 'bg-yellow-400 text-black hover:bg-yellow-300 hover:-rotate-1'
-                                    : 'bg-white/10 backdrop-blur-sm border-2 border-white/60 text-white hover:bg-white hover:text-black hover:rotate-1'
-                                    }`}
-                            >
-                                {isBatchMode ? '✓ Batch Mode' : 'Single Mode'}
-                            </button>
-                        </div>
                     </>
                 )}
 

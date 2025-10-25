@@ -327,6 +327,7 @@ async function callOpenRouterWithRetry(imageDataUrl: string, prompt: string): Pr
                         }
                     ],
                     max_tokens: 1024,
+                    temperature: 1.0,
                 }),
             });
 
@@ -366,7 +367,11 @@ export async function generateDecadeImage(imageFile: File, decade: string): Prom
     try {
         const analysis = await analyzeImage(imageFile);
         const basePrompt = DECADE_PROMPTS[decade];
-        const dynamicPrompt = `Transform this ${analysis.description} into a ${decade} portrait photograph. ${basePrompt} ${analysis.adaptation}`;
+        const randomPose = POSE_VARIATIONS[Math.floor(Math.random() * POSE_VARIATIONS.length)];
+        const randomLighting = LIGHTING_VARIATIONS[Math.floor(Math.random() * LIGHTING_VARIATIONS.length)];
+        const randomAccessory = ACCESSORY_VARIATIONS[Math.floor(Math.random() * ACCESSORY_VARIATIONS.length)];
+
+        const dynamicPrompt = `${basePrompt} Based on the uploaded photo: ${analysis.description}. Apply: ${analysis.adaptation}. Preserve the person's exact facial identity and biometric likeness (eyes, nose, mouth, bone structure). You may strongly change hairstyle, facial hair, makeup, accessories (including piercings and tattoos), wardrobe, background, and composition to match the ${decade} style. Incorporate ${randomPose}, ${randomLighting}, and ${randomAccessory}. Output a single photorealistic image.`;
 
         // Convert file to data URL for generation
         const imageDataUrl = await fileToDataURL(imageFile);

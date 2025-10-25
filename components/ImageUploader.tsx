@@ -17,17 +17,14 @@ const GHOST_POLAROIDS_CONFIG = [
 
 interface ImageUploaderProps {
     onImageSelect: (file: File) => void;
-    onBatchSelect?: (files: File[]) => void;
-    isBatchMode?: boolean;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, onBatchSelect, isBatchMode = false }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            if (isBatchMode && onBatchSelect) {
-                onBatchSelect(Array.from(e.target.files));
-            } else if (e.target.files[0]) {
-                onImageSelect(e.target.files[0]);
+            const [firstFile] = e.target.files;
+            if (firstFile) {
+                onImageSelect(firstFile);
             }
         }
     };
@@ -70,7 +67,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, onBatchSel
                     className="hidden"
                     accept="image/png, image/jpeg, image/webp"
                     onChange={handleFileChange}
-                    multiple={isBatchMode}
                 />
                 <p className="mt-8 font-permanent-marker text-neutral-500 text-center max-w-xs text-lg">
                     Click the polaroid to upload your photo and start your journey through time.

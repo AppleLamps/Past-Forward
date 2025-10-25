@@ -18,14 +18,15 @@ interface PolaroidCardProps {
     onShake?: (caption: string) => void;
     onDownload?: (caption: string) => void;
     isMobile?: boolean;
+    onOpen?: (caption: string, imageUrl: string) => void;
 }
 
-const LoadingSpinner = () => (
-    <div className="flex items-center justify-center h-full">
-        <svg className="animate-spin h-8 w-8 text-neutral-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
+const GoldenShimmer = () => (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="golden-shimmer" aria-hidden="true" />
+        <span className="relative z-10 font-permanent-marker text-lg uppercase tracking-[0.35em] text-yellow-200 drop-shadow-[0_0_10px_rgba(0,0,0,0.65)]">
+            Developing…
+        </span>
     </div>
 );
 
@@ -48,7 +49,7 @@ const Placeholder = () => (
 );
 
 
-const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, error, dragConstraintsRef, onShake, onDownload, isMobile }) => {
+const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, error, dragConstraintsRef, onShake, onDownload, isMobile, onOpen }) => {
     const [isDeveloped, setIsDeveloped] = useState(false);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const lastShakeTime = useRef(0);
@@ -119,7 +120,8 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
     const cardInnerContent = (
         <>
             <div className="w-full bg-neutral-900 shadow-inner flex-grow relative overflow-hidden group">
-                {status === 'pending' && <LoadingSpinner />}
+                {status === 'pending' && <GoldenShimmer />}
+
                 {status === 'error' && <ErrorDisplay />}
                 {status === 'done' && imageUrl && (
                     <>
@@ -172,6 +174,12 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
                             key={imageUrl}
                             src={imageUrl}
                             alt={caption}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onOpen) {
+                                    onOpen(caption, imageUrl);
+                                }
+                            }}
                             onLoad={() => {
                                 console.log(`Image loaded for ${caption}:`, imageUrl?.substring(0, 50));
                                 console.log(`isDeveloped: ${isDeveloped}, isImageLoaded will be set to true`);
